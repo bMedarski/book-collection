@@ -559,6 +559,19 @@
     font-variant-numeric: tabular-nums;
   }
 
+  .goodreads-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  .goodreads-link:hover { text-decoration: underline; }
+  .goodreads-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+
   .read-status {
     margin-top: 6px;
     padding-top: 20px;
@@ -720,7 +733,14 @@
     try { localStorage.setItem(READ_STORAGE_KEY, JSON.stringify(readStatus)); } catch (e) { /* storage unavailable */ }
   }
 
-  function isRead(id) { return !!readStatus[String(id)]; }
+  function isRead(id) {
+    const key = String(id);
+    // An explicit in-app toggle always wins; otherwise fall back to the
+    // spreadsheet's own Read column ("y") as the starting value.
+    if (Object.prototype.hasOwnProperty.call(readStatus, key)) return !!readStatus[key];
+    const book = ALL_BOOKS_BY_ID.get(id);
+    return !!(book && book.read);
+  }
 
   async function setRead(id, value) {
     readStatus = { ...readStatus, [String(id)]: value };
@@ -812,6 +832,12 @@
     return `<div class="detail-field"><dt>${label}</dt><dd${plain ? ' class="plain"' : ''}>${valueHtml}</dd></div>`;
   }
 
+  function goodreadsLink(book) {
+    return book.goodreads
+      ? `<a class="goodreads-link" href="${escapeHtml(book.goodreads)}" target="_blank" rel="noopener noreferrer">View on Goodreads <span aria-hidden="true">&#8599;</span></a>`
+      : '';
+  }
+
   function bookDetailHtml(book) {
     const rows = [
       detailField('Author', authorBtn(book)),
@@ -819,6 +845,7 @@
       detailField('Publisher', publisherBtn(book)),
       detailField('Year', book.year ? escapeHtml(book.year) : '', true),
       detailField('ISBN', book.isbn ? escapeHtml(book.isbn) : '', true),
+      detailField('Goodreads', goodreadsLink(book)),
     ].join('');
     const read = isRead(book.id);
 
