@@ -557,9 +557,10 @@
 
   .pager {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: center;
-    gap: 14px;
+    gap: 10px 14px;
     margin-top: 36px;
     font-size: 14px;
     color: var(--text-muted);
@@ -590,8 +591,9 @@
     white-space: nowrap;
   }
 
-  #pageInput {
-    width: 3em;
+  .page-input {
+    width: 2.6em;
+    flex: none;
     text-align: center;
     font: inherit;
     font-size: 14px;
@@ -602,7 +604,7 @@
     padding: 6px 4px;
   }
 
-  #pageInput:focus {
+  .page-input:focus {
     outline: none;
     border-color: var(--accent);
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
@@ -873,17 +875,21 @@
   <div class="stats" id="stats"></div>
 
   <div class="pager">
+    <button class="first-page" type="button">&laquo; First</button>
     <button class="prev-page" type="button">&larr; Prev</button>
     <span class="pager-info">Page <input class="page-input" type="text" inputmode="numeric" value="1" aria-label="Page number" /> of <span class="page-total">1</span></span>
     <button class="next-page" type="button">Next &rarr;</button>
+    <button class="last-page" type="button">Last &raquo;</button>
   </div>
 
   <div id="grid"></div>
 
   <div class="pager">
+    <button class="first-page" type="button">&laquo; First</button>
     <button class="prev-page" type="button">&larr; Prev</button>
     <span class="pager-info">Page <input class="page-input" type="text" inputmode="numeric" value="1" aria-label="Page number" /> of <span class="page-total">1</span></span>
     <button class="next-page" type="button">Next &rarr;</button>
+    <button class="last-page" type="button">Last &raquo;</button>
   </div>
 </div>
 
@@ -911,8 +917,10 @@
   const searchInput = document.getElementById('search');
   const resultCount = document.getElementById('resultCount');
   const statsEl = document.getElementById('stats');
+  const firstBtns = document.querySelectorAll('.first-page');
   const prevBtns = document.querySelectorAll('.prev-page');
   const nextBtns = document.querySelectorAll('.next-page');
+  const lastBtns = document.querySelectorAll('.last-page');
   const pageInputs = document.querySelectorAll('.page-input');
   const pageTotalEls = document.querySelectorAll('.page-total');
   const filterBar = document.getElementById('filterBar');
@@ -1116,8 +1124,10 @@
 
     pageInputs.forEach((el) => { el.value = currentPage; });
     pageTotalEls.forEach((el) => { el.textContent = pages; });
+    firstBtns.forEach((el) => { el.disabled = currentPage <= 1; });
     prevBtns.forEach((el) => { el.disabled = currentPage <= 1; });
     nextBtns.forEach((el) => { el.disabled = currentPage >= pages; });
+    lastBtns.forEach((el) => { el.disabled = currentPage >= pages; });
   }
 
   function norm(s) { return (s || '').toLowerCase(); }
@@ -1341,8 +1351,10 @@
   backToShelfBtn.addEventListener('click', () => { location.hash = ''; });
   window.addEventListener('hashchange', route);
 
+  firstBtns.forEach((btn) => btn.addEventListener('click', () => { currentPage = 1; renderPage(); }));
   prevBtns.forEach((btn) => btn.addEventListener('click', () => { currentPage -= 1; renderPage(); }));
   nextBtns.forEach((btn) => btn.addEventListener('click', () => { currentPage += 1; renderPage(); }));
+  lastBtns.forEach((btn) => btn.addEventListener('click', () => { currentPage = totalPages(); renderPage(); }));
 
   pageInputs.forEach((inp) => inp.addEventListener('change', () => {
     const n = parseInt(inp.value, 10);
