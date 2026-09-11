@@ -277,6 +277,40 @@
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
   }
 
+  .combo { position: relative; }
+  .combo input { width: 100%; }
+
+  .combo-list {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    max-height: 200px;
+    overflow-y: auto;
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    z-index: 30;
+  }
+
+  .combo-option {
+    padding: 7px 10px;
+    font-size: 13.5px;
+    font-weight: 400;
+    color: var(--text);
+    cursor: pointer;
+  }
+
+  .combo-option:hover, .combo-option.active { background: var(--tag-bg); }
+
+  .combo-empty {
+    padding: 7px 10px;
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--text-muted);
+  }
+
   #clearFiltersBtn {
     grid-column: 1 / -1;
     justify-self: start;
@@ -796,15 +830,24 @@
       <div class="filter-panel-body">
         <label class="filter-field">
           <span>Author</span>
-          <input type="text" id="filterAuthor" list="authorOptions" placeholder="Any author" autocomplete="off">
+          <div class="combo">
+            <input type="text" id="filterAuthor" placeholder="Any author" autocomplete="off" role="combobox" aria-expanded="false">
+            <div class="combo-list" id="filterAuthorList" role="listbox" hidden></div>
+          </div>
         </label>
         <label class="filter-field">
           <span>Series</span>
-          <input type="text" id="filterSeries" list="seriesOptions" placeholder="Any series" autocomplete="off">
+          <div class="combo">
+            <input type="text" id="filterSeries" placeholder="Any series" autocomplete="off" role="combobox" aria-expanded="false">
+            <div class="combo-list" id="filterSeriesList" role="listbox" hidden></div>
+          </div>
         </label>
         <label class="filter-field">
           <span>Publisher</span>
-          <input type="text" id="filterPublisher" list="publisherOptions" placeholder="Any publisher" autocomplete="off">
+          <div class="combo">
+            <input type="text" id="filterPublisher" placeholder="Any publisher" autocomplete="off" role="combobox" aria-expanded="false">
+            <div class="combo-list" id="filterPublisherList" role="listbox" hidden></div>
+          </div>
         </label>
         <label class="filter-field">
           <span>Year</span>
@@ -820,9 +863,6 @@
         </label>
         <button type="button" id="clearFiltersBtn">Clear filters</button>
       </div>
-      <datalist id="authorOptions"></datalist>
-      <datalist id="seriesOptions"></datalist>
-      <datalist id="publisherOptions"></datalist>
     </details>
     <div class="result-count" id="resultCount"></div>
   </div>
@@ -832,12 +872,18 @@
   </div>
   <div class="stats" id="stats"></div>
 
+  <div class="pager">
+    <button class="prev-page" type="button">&larr; Prev</button>
+    <span class="pager-info">Page <input class="page-input" type="text" inputmode="numeric" value="1" aria-label="Page number" /> of <span class="page-total">1</span></span>
+    <button class="next-page" type="button">Next &rarr;</button>
+  </div>
+
   <div id="grid"></div>
 
   <div class="pager">
-    <button id="prevPage" type="button">&larr; Prev</button>
-    <span class="pager-info">Page <input id="pageInput" type="text" inputmode="numeric" value="1" aria-label="Page number" /> of <span id="pageTotal">1</span></span>
-    <button id="nextPage" type="button">Next &rarr;</button>
+    <button class="prev-page" type="button">&larr; Prev</button>
+    <span class="pager-info">Page <input class="page-input" type="text" inputmode="numeric" value="1" aria-label="Page number" /> of <span class="page-total">1</span></span>
+    <button class="next-page" type="button">Next &rarr;</button>
   </div>
 </div>
 
@@ -865,10 +911,10 @@
   const searchInput = document.getElementById('search');
   const resultCount = document.getElementById('resultCount');
   const statsEl = document.getElementById('stats');
-  const prevBtn = document.getElementById('prevPage');
-  const nextBtn = document.getElementById('nextPage');
-  const pageInput = document.getElementById('pageInput');
-  const pageTotalEl = document.getElementById('pageTotal');
+  const prevBtns = document.querySelectorAll('.prev-page');
+  const nextBtns = document.querySelectorAll('.next-page');
+  const pageInputs = document.querySelectorAll('.page-input');
+  const pageTotalEls = document.querySelectorAll('.page-total');
   const filterBar = document.getElementById('filterBar');
   const filterLabel = document.getElementById('filterLabel');
   const clearFilterBtn = document.getElementById('clearFilter');
@@ -886,9 +932,13 @@
   const filterYearSelect = document.getElementById('filterYear');
   const filterReadSelect = document.getElementById('filterRead');
   const clearFiltersBtn = document.getElementById('clearFiltersBtn');
-  const authorOptionsEl = document.getElementById('authorOptions');
-  const seriesOptionsEl = document.getElementById('seriesOptions');
-  const publisherOptionsEl = document.getElementById('publisherOptions');
+  const filterAuthorList = document.getElementById('filterAuthorList');
+  const filterSeriesList = document.getElementById('filterSeriesList');
+  const filterPublisherList = document.getElementById('filterPublisherList');
+
+  let authorOptions = [];
+  let seriesOptions = [];
+  let publisherOptions = [];
 
   let activeShelfKey = SHELVES[0].key;
   let BOOKS = shelfByKey(activeShelfKey).books;
@@ -1064,10 +1114,10 @@
       ? ''
       : `${filtered.length} of ${BOOKS.length} match`;
 
-    pageInput.value = currentPage;
-    pageTotalEl.textContent = pages;
-    prevBtn.disabled = currentPage <= 1;
-    nextBtn.disabled = currentPage >= pages;
+    pageInputs.forEach((el) => { el.value = currentPage; });
+    pageTotalEls.forEach((el) => { el.textContent = pages; });
+    prevBtns.forEach((el) => { el.disabled = currentPage <= 1; });
+    nextBtns.forEach((el) => { el.disabled = currentPage >= pages; });
   }
 
   function norm(s) { return (s || '').toLowerCase(); }
@@ -1136,16 +1186,80 @@
   }
 
   function populateFilterOptions() {
-    const authors = [...new Set(BOOKS.map((b) => b.author).filter(Boolean))].sort((a, b) => a.localeCompare(b));
-    const series = [...new Set(BOOKS.map((b) => b.series).filter(Boolean))].sort((a, b) => a.localeCompare(b));
-    const publishers = [...new Set(BOOKS.map((b) => b.publisher).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+    authorOptions = [...new Set(BOOKS.map((b) => b.author).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+    seriesOptions = [...new Set(BOOKS.map((b) => b.series).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+    publisherOptions = [...new Set(BOOKS.map((b) => b.publisher).filter(Boolean))].sort((a, b) => a.localeCompare(b));
     const years = [...new Set(BOOKS.map((b) => b.year).filter(Boolean))].sort((a, b) => b.localeCompare(a));
 
-    authorOptionsEl.innerHTML = authors.map((a) => `<option value="${escapeHtml(a)}">`).join('');
-    seriesOptionsEl.innerHTML = series.map((s) => `<option value="${escapeHtml(s)}">`).join('');
-    publisherOptionsEl.innerHTML = publishers.map((p) => `<option value="${escapeHtml(p)}">`).join('');
     filterYearSelect.innerHTML = '<option value="">Any year</option>' + years.map((y) => `<option value="${escapeHtml(y)}">${escapeHtml(y)}</option>`).join('');
   }
+
+  // A small combobox: a text input (substring-filters the book list live,
+  // same as typing) paired with a scrollable, styled suggestions list --
+  // used instead of a native <datalist>, whose unstyled popup looks broken
+  // against hundreds of options (Other Books alone has 624 authors).
+  function setupCombo(input, list, getOptions, filterKey) {
+    let items = [];
+    let activeIndex = -1;
+
+    function renderList(query) {
+      const q = norm(query);
+      items = getOptions().filter((o) => norm(o).includes(q)).slice(0, 100);
+      activeIndex = -1;
+      list.innerHTML = items.length
+        ? items.map((o, i) => `<div class="combo-option" role="option" data-index="${i}">${escapeHtml(o)}</div>`).join('')
+        : '<div class="combo-empty">No matches</div>';
+      list.hidden = false;
+      input.setAttribute('aria-expanded', 'true');
+    }
+
+    function hideList() {
+      list.hidden = true;
+      input.setAttribute('aria-expanded', 'false');
+      activeIndex = -1;
+    }
+
+    function setActive(options) {
+      options.forEach((el, i) => el.classList.toggle('active', i === activeIndex));
+      if (options[activeIndex]) options[activeIndex].scrollIntoView({ block: 'nearest' });
+    }
+
+    function selectValue(value) {
+      input.value = value;
+      filters[filterKey] = value;
+      recompute();
+      hideList();
+    }
+
+    input.addEventListener('input', () => {
+      filters[filterKey] = input.value.trim();
+      recompute();
+      renderList(input.value);
+    });
+
+    input.addEventListener('focus', () => renderList(input.value));
+
+    input.addEventListener('keydown', (e) => {
+      if (list.hidden) return;
+      const options = list.querySelectorAll('.combo-option');
+      if (e.key === 'ArrowDown') { e.preventDefault(); activeIndex = Math.min(activeIndex + 1, options.length - 1); setActive(options); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); activeIndex = Math.max(activeIndex - 1, 0); setActive(options); }
+      else if (e.key === 'Enter') { if (activeIndex >= 0 && items[activeIndex] != null) { e.preventDefault(); selectValue(items[activeIndex]); } else hideList(); }
+      else if (e.key === 'Escape') { hideList(); }
+    });
+
+    input.addEventListener('blur', () => { setTimeout(hideList, 120); });
+
+    list.addEventListener('mousedown', (e) => e.preventDefault());
+    list.addEventListener('click', (e) => {
+      const opt = e.target.closest('.combo-option');
+      if (opt) selectValue(items[Number(opt.dataset.index)]);
+    });
+  }
+
+  setupCombo(filterAuthorInput, filterAuthorList, () => authorOptions, 'author');
+  setupCombo(filterSeriesInput, filterSeriesList, () => seriesOptions, 'series');
+  setupCombo(filterPublisherInput, filterPublisherList, () => publisherOptions, 'publisher');
 
   function openBook(id) { location.hash = '#/book/' + id; }
 
@@ -1217,9 +1331,6 @@
     }
   });
 
-  filterAuthorInput.addEventListener('input', () => { filters.author = filterAuthorInput.value.trim(); recompute(); });
-  filterSeriesInput.addEventListener('input', () => { filters.series = filterSeriesInput.value.trim(); recompute(); });
-  filterPublisherInput.addEventListener('input', () => { filters.publisher = filterPublisherInput.value.trim(); recompute(); });
   filterYearSelect.addEventListener('change', () => { filters.year = filterYearSelect.value; recompute(); });
   filterReadSelect.addEventListener('change', () => { filters.read = filterReadSelect.value; recompute(); });
   clearFiltersBtn.addEventListener('click', clearFilters);
@@ -1230,14 +1341,14 @@
   backToShelfBtn.addEventListener('click', () => { location.hash = ''; });
   window.addEventListener('hashchange', route);
 
-  prevBtn.addEventListener('click', () => { currentPage -= 1; renderPage(); });
-  nextBtn.addEventListener('click', () => { currentPage += 1; renderPage(); });
+  prevBtns.forEach((btn) => btn.addEventListener('click', () => { currentPage -= 1; renderPage(); }));
+  nextBtns.forEach((btn) => btn.addEventListener('click', () => { currentPage += 1; renderPage(); }));
 
-  pageInput.addEventListener('change', () => {
-    const n = parseInt(pageInput.value, 10);
+  pageInputs.forEach((inp) => inp.addEventListener('change', () => {
+    const n = parseInt(inp.value, 10);
     currentPage = Number.isFinite(n) ? n : 1;
     renderPage();
-  });
+  }));
 
   renderTabs();
   updateStats();
