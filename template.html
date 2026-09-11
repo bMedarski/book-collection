@@ -218,10 +218,28 @@
   }
 
   .cover-wrap {
+    position: relative;
     aspect-ratio: 2 / 3;
     background: var(--border);
     display: block;
     overflow: hidden;
+  }
+
+  .read-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: var(--accent-contrast);
+    background: var(--tag);
+    padding: 3px 8px;
+    border-radius: 100px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
   }
 
   .cover-wrap img {
@@ -516,8 +534,63 @@
     font-variant-numeric: tabular-nums;
   }
 
+  .read-toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    margin-bottom: 24px;
+    background: var(--tag-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-flex;
+    width: 42px;
+    height: 24px;
+    flex-shrink: 0;
+  }
+
+  .switch input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    margin: 0;
+    cursor: pointer;
+  }
+
+  .switch-track {
+    position: absolute;
+    inset: 0;
+    background: var(--border);
+    border-radius: 100px;
+    transition: background 0.15s;
+    pointer-events: none;
+  }
+
+  .switch-thumb {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--surface-raised);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    transition: transform 0.15s;
+  }
+
+  .switch input:checked + .switch-track { background: var(--tag); }
+  .switch input:checked + .switch-track .switch-thumb { transform: translateX(18px); }
+  .switch input:focus-visible + .switch-track { outline: 2px solid var(--accent); outline-offset: 2px; }
+
   @media (prefers-reduced-motion: reduce) {
     .card { transition: none; }
+    .switch-thumb, .switch-track { transition: none; }
   }
 </style>
 
@@ -586,6 +659,65 @@
   let currentPage = 1;
   let activeFilter = null; // { type: 'author' | 'series' | 'publisher', value: string }
 
+  // Read/unread status: uses the artifact's db capability when this page
+  // runs on claude.ai (synced, persists server-side); falls back to
+  // localStorage everywhere else (e.g. the plain GitHub Pages copy).
+  const READ_STORAGE_KEY = 'fantasyShelfReadIds';
+  let readStatus = {};
+  let readDoc = null;
+
+  function loadReadStatusLocal() {
+    try { return JSON.parse(localStorage.getItem(READ_STORAGE_KEY) || '{}'); } catch (e) { return {}; }
+  }
+
+  function saveReadStatusLocal() {
+    try { localStorage.setItem(READ_STORAGE_KEY, JSON.stringify(readStatus)); } catch (e) { /* storage unavailable */ }
+  }
+
+  function isRead(id) { return !!readStatus[String(id)]; }
+
+  async function setRead(id, value) {
+    readStatus = { ...readStatus, [String(id)]: value };
+    if (readDoc) {
+      try { await readDoc.set(readStatus); } catch (e) { /* keep the optimistic local state */ }
+    } else {
+      saveReadStatusLocal();
+    }
+    refreshReadUi();
+  }
+
+  function refreshReadUi() {
+    renderPage();
+    const m = location.hash.match(/^#\/book\/(\d+)/);
+    const toggle = document.getElementById('readToggle');
+    if (m && toggle && Number(toggle.dataset.bookId) === Number(m[1])) {
+      toggle.checked = isRead(Number(m[1]));
+      const label = document.getElementById('readToggleLabel');
+      if (label) label.textContent = toggle.checked ? 'Read' : 'Not read';
+    }
+  }
+
+  async function initReadStore() {
+    if (window.claude && window.claude.use) {
+      try {
+        const db = await window.claude.use('db');
+        if (db) {
+          readDoc = db.doc('meta/read-status');
+          readDoc.onSnapshot((snap) => {
+            readStatus = (snap.exists && snap.data()) || {};
+            refreshReadUi();
+          });
+          return;
+        }
+      } catch (e) { /* fall back to localStorage below */ }
+    }
+    readStatus = loadReadStatusLocal();
+    window.addEventListener('storage', (e) => {
+      if (e.key === READ_STORAGE_KEY) { readStatus = loadReadStatusLocal(); refreshReadUi(); }
+    });
+    refreshReadUi();
+  }
+
   function escapeHtml(str) {
     return str.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
@@ -612,9 +744,10 @@
     const meta = [authorBtn(book), seriesBtn(book), publisherBtn(book)].filter(Boolean);
     if (book.year) meta.push(`<span class="meta-year">${escapeHtml(book.year)}</span>`);
     const metaHtml = meta.join('<span class="meta-dot">&middot;</span>');
+    const badge = isRead(book.id) ? '<span class="read-badge">&check; Read</span>' : '';
 
     return `<div class="card" data-book-id="${book.id}">
-      <div class="cover-wrap">${coverInner(book)}</div>
+      <div class="cover-wrap">${coverInner(book)}${badge}</div>
       <div class="card-body">
         <div class="card-title">${escapeHtml(book.title)}</div>
         <div class="card-meta">${metaHtml}</div>
@@ -635,12 +768,20 @@
       detailField('Year', book.year ? escapeHtml(book.year) : '', true),
       detailField('ISBN', book.isbn ? escapeHtml(book.isbn) : '', true),
     ].join('');
+    const read = isRead(book.id);
 
     return `<div class="detail-layout">
       <div class="detail-cover">${coverInner(book)}</div>
       <div class="detail-info">
         <div class="detail-eyebrow">Fantasy Shelf</div>
         <h2 class="detail-title">${escapeHtml(book.title)}</h2>
+        <div class="read-toggle-row">
+          <label class="switch">
+            <input type="checkbox" id="readToggle" data-book-id="${book.id}" ${read ? 'checked' : ''} aria-label="Mark as read">
+            <span class="switch-track"><span class="switch-thumb"></span></span>
+          </label>
+          <span id="readToggleLabel">${read ? 'Read' : 'Not read'}</span>
+        </div>
         <dl class="detail-fields">${rows}</dl>
       </div>
     </div>`;
@@ -731,6 +872,15 @@
     if (card && card.dataset.bookId) openBook(Number(card.dataset.bookId));
   });
 
+  document.addEventListener('change', (e) => {
+    const toggle = e.target.closest('#readToggle');
+    if (!toggle) return;
+    const checked = toggle.checked;
+    setRead(Number(toggle.dataset.bookId), checked);
+    const label = document.getElementById('readToggleLabel');
+    if (label) label.textContent = checked ? 'Read' : 'Not read';
+  });
+
   clearFilterBtn.addEventListener('click', () => { activeFilter = null; recompute(); });
 
   homeLink.addEventListener('click', (e) => { e.preventDefault(); location.hash = ''; });
@@ -752,4 +902,5 @@
 
   renderPage();
   route();
+  initReadStore();
 </script>
