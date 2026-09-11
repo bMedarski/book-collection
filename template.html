@@ -152,9 +152,13 @@
 
   #grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(152px, 1fr));
+    grid-template-columns: repeat(6, 1fr);
     gap: 26px 16px;
   }
+
+  @media (max-width: 980px) { #grid { grid-template-columns: repeat(4, 1fr); } }
+  @media (max-width: 700px) { #grid { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 460px) { #grid { grid-template-columns: repeat(2, 1fr); } }
 
   .card {
     display: flex;
@@ -269,6 +273,59 @@
     font-size: 15px;
   }
 
+  .pager {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    margin-top: 36px;
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+
+  .pager button {
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 16px;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+
+  .pager button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent-strong); }
+
+  .pager button:disabled { opacity: 0.4; cursor: default; }
+
+  .pager-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  #pageInput {
+    width: 3em;
+    text-align: center;
+    font: inherit;
+    font-size: 14px;
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 4px;
+  }
+
+  #pageInput:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+  }
+
   footer {
     margin-top: 48px;
     padding-top: 18px;
@@ -299,15 +356,30 @@
 
 <div id="grid"></div>
 
+<div class="pager">
+  <button id="prevPage" type="button">&larr; Prev</button>
+  <span class="pager-info">Page <input id="pageInput" type="text" inputmode="numeric" value="1" aria-label="Page number" /> of <span id="pageTotal">1</span></span>
+  <button id="nextPage" type="button">Next &rarr;</button>
+</div>
+
 <footer>Snapshot of the Fantasy tab from your library spreadsheet &middot; ask to refresh after adding books.</footer>
 
 <script>
-  const BOOKS = /*__BOOKS_DATA__*/[]/*__END_BOOKS_DATA__*/;
+  const PAGE_SIZE = 24;
+  // Newest additions (end of the spreadsheet) shown first.
+  const BOOKS = (/*__BOOKS_DATA__*/[]/*__END_BOOKS_DATA__*/).slice().reverse();
 
   const grid = document.getElementById('grid');
   const searchInput = document.getElementById('search');
   const resultCount = document.getElementById('resultCount');
   const statsEl = document.getElementById('stats');
+  const prevBtn = document.getElementById('prevPage');
+  const nextBtn = document.getElementById('nextPage');
+  const pageInput = document.getElementById('pageInput');
+  const pageTotalEl = document.getElementById('pageTotal');
+
+  let filtered = BOOKS;
+  let currentPage = 1;
 
   function escapeHtml(str) {
     return str.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -333,26 +405,54 @@
     </div>`;
   }
 
-  function render(list) {
-    grid.innerHTML = list.length
-      ? list.map(cardHtml).join('')
+  function totalPages() { return Math.max(1, Math.ceil(filtered.length / PAGE_SIZE)); }
+
+  function renderPage() {
+    const pages = totalPages();
+    currentPage = Math.min(Math.max(1, currentPage), pages);
+
+    const start = (currentPage - 1) * PAGE_SIZE;
+    const pageItems = filtered.slice(start, start + PAGE_SIZE);
+
+    grid.innerHTML = pageItems.length
+      ? pageItems.map(cardHtml).join('')
       : '<div class="empty">No books match that search.</div>';
-    resultCount.textContent = list.length === BOOKS.length ? '' : `${list.length} of ${BOOKS.length} shown`;
+
+    resultCount.textContent = filtered.length === BOOKS.length
+      ? ''
+      : `${filtered.length} of ${BOOKS.length} match`;
+
+    pageInput.value = currentPage;
+    pageTotalEl.textContent = pages;
+    prevBtn.disabled = currentPage <= 1;
+    nextBtn.disabled = currentPage >= pages;
   }
 
   function norm(s) { return (s || '').toLowerCase(); }
 
   function applySearch() {
     const q = norm(searchInput.value.trim());
-    if (!q) { render(BOOKS); return; }
-    render(BOOKS.filter((b) => norm(b.title).includes(q) || norm(b.series).includes(q) || norm(b.author).includes(q)));
+    filtered = q
+      ? BOOKS.filter((b) => norm(b.title).includes(q) || norm(b.series).includes(q) || norm(b.author).includes(q))
+      : BOOKS;
+    currentPage = 1;
+    renderPage();
   }
 
   searchInput.addEventListener('input', applySearch);
+
+  prevBtn.addEventListener('click', () => { currentPage -= 1; renderPage(); });
+  nextBtn.addEventListener('click', () => { currentPage += 1; renderPage(); });
+
+  pageInput.addEventListener('change', () => {
+    const n = parseInt(pageInput.value, 10);
+    currentPage = Number.isFinite(n) ? n : 1;
+    renderPage();
+  });
 
   const authorCount = new Set(BOOKS.map((b) => b.author).filter(Boolean)).size;
   const seriesCount = new Set(BOOKS.map((b) => b.series).filter(Boolean)).size;
   statsEl.innerHTML = `<strong>${BOOKS.length}</strong> books &middot; <strong>${authorCount}</strong> authors &middot; <strong>${seriesCount}</strong> series`;
 
-  render(BOOKS);
+  renderPage();
 </script>
