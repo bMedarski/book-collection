@@ -1,0 +1,358 @@
+<title>The Fantasy Shelf</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=PT+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f1ede2;
+    --surface: #fbf9f3;
+    --surface-raised: #ffffff;
+    --text: #24211b;
+    --text-muted: #6d6555;
+    --border: #ddd4c0;
+    --accent: #90621a;
+    --accent-strong: #6f4c14;
+    --accent-contrast: #fff8ec;
+    --tag: #3c6259;
+    --tag-bg: rgba(60, 98, 89, 0.12);
+    --shadow: 0 1px 2px rgba(36, 33, 27, 0.06), 0 8px 20px -12px rgba(36, 33, 27, 0.18);
+    color-scheme: light;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #1a1815;
+      --surface: #232019;
+      --surface-raised: #2a271f;
+      --text: #ede6d6;
+      --text-muted: #a89b83;
+      --border: #3a352a;
+      --accent: #dcaa53;
+      --accent-strong: #f0c274;
+      --accent-contrast: #201a0e;
+      --tag: #83b6a4;
+      --tag-bg: rgba(131, 182, 164, 0.16);
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 24px -14px rgba(0, 0, 0, 0.6);
+      color-scheme: dark;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #1a1815;
+    --surface: #232019;
+    --surface-raised: #2a271f;
+    --text: #ede6d6;
+    --text-muted: #a89b83;
+    --border: #3a352a;
+    --accent: #dcaa53;
+    --accent-strong: #f0c274;
+    --accent-contrast: #201a0e;
+    --tag: #83b6a4;
+    --tag-bg: rgba(131, 182, 164, 0.16);
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 24px -14px rgba(0, 0, 0, 0.6);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "PT Sans", -apple-system, "Segoe UI", sans-serif;
+    padding-inline: max(16px, calc((100vw - 1180px) / 2));
+    padding-block: 28px 60px;
+  }
+
+  a { color: inherit; }
+
+  .top {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding-bottom: 22px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 28px;
+  }
+
+  .eyebrow {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--tag);
+  }
+
+  h1 {
+    font-family: "PT Serif", Georgia, serif;
+    font-weight: 700;
+    font-size: clamp(28px, 4.4vw, 44px);
+    line-height: 1.08;
+    margin: 6px 0 0;
+    text-wrap: balance;
+  }
+
+  .stats {
+    font-size: 14px;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .stats strong { color: var(--text); font-weight: 700; }
+
+  .search-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 14px;
+    margin-top: 4px;
+  }
+
+  .search-box {
+    position: relative;
+    flex: 1 1 320px;
+    max-width: 480px;
+  }
+
+  .search-box svg {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 17px;
+    height: 17px;
+    stroke: var(--text-muted);
+    pointer-events: none;
+  }
+
+  #search {
+    width: 100%;
+    font: inherit;
+    font-size: 15px;
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 11px 14px 11px 40px;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+
+  #search::placeholder { color: var(--text-muted); }
+
+  #search:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+  }
+
+  .result-count {
+    font-size: 13px;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  #grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(152px, 1fr));
+    gap: 26px 16px;
+  }
+
+  .card {
+    display: flex;
+    flex-direction: column;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .card:hover { transform: translateY(-3px); }
+
+  .cover-wrap {
+    aspect-ratio: 2 / 3;
+    background: var(--border);
+    display: block;
+    overflow: hidden;
+  }
+
+  .cover-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .cover-fallback {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 12px;
+    background: linear-gradient(160deg, color-mix(in srgb, var(--tag) 24%, var(--surface)), var(--surface-raised));
+  }
+
+  .cover-fallback .ft {
+    font-family: "PT Serif", Georgia, serif;
+    font-weight: 700;
+    font-size: 14px;
+    line-height: 1.25;
+    color: var(--text);
+  }
+
+  .cover-fallback .fa {
+    margin-top: 6px;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px;
+  }
+
+  .card-title {
+    font-family: "PT Serif", Georgia, serif;
+    font-weight: 700;
+    font-size: 14.5px;
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .card-author {
+    font-size: 12.5px;
+    color: var(--text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .card-meta {
+    margin-top: auto;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    padding-top: 4px;
+  }
+
+  .series-tag {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--tag);
+    background: var(--tag-bg);
+    padding: 3px 8px;
+    border-radius: 100px;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .pub-year {
+    font-size: 11.5px;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  .empty {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-muted);
+    font-size: 15px;
+  }
+
+  footer {
+    margin-top: 48px;
+    padding-top: 18px;
+    border-top: 1px solid var(--border);
+    font-size: 12.5px;
+    color: var(--text-muted);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .card { transition: none; }
+  }
+</style>
+
+<div class="top">
+  <div>
+    <div class="eyebrow">Personal Library &middot; Fantasy Shelf</div>
+    <h1>The Fantasy Shelf</h1>
+  </div>
+  <div class="search-row">
+    <div class="search-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      <input id="search" type="search" placeholder="Search title, series, or author&hellip;" autocomplete="off" />
+    </div>
+    <div class="result-count" id="resultCount"></div>
+  </div>
+  <div class="stats" id="stats"></div>
+</div>
+
+<div id="grid"></div>
+
+<footer>Snapshot of the Fantasy tab from your library spreadsheet &middot; ask to refresh after adding books.</footer>
+
+<script>
+  const BOOKS = /*__BOOKS_DATA__*/[]/*__END_BOOKS_DATA__*/;
+
+  const grid = document.getElementById('grid');
+  const searchInput = document.getElementById('search');
+  const resultCount = document.getElementById('resultCount');
+  const statsEl = document.getElementById('stats');
+
+  function escapeHtml(str) {
+    return str.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
+  function cardHtml(book) {
+    const cover = book.image
+      ? `<div class="cover-wrap"><img src="${escapeHtml(book.image)}" alt="Cover of ${escapeHtml(book.title)}" loading="lazy" onerror="this.parentElement.outerHTML='<div class=&quot;cover-wrap&quot;><div class=&quot;cover-fallback&quot;><div class=&quot;ft&quot;>' + this.alt.replace('Cover of ','') + '</div></div></div>';" /></div>`
+      : `<div class="cover-wrap"><div class="cover-fallback"><div class="ft">${escapeHtml(book.title)}</div>${book.author ? `<div class="fa">${escapeHtml(book.author)}</div>` : ''}</div></div>`;
+
+    const meta = [];
+    if (book.series) meta.push(`<span class="series-tag" title="${escapeHtml(book.series)}">${escapeHtml(book.series)}</span>`);
+    const pubYear = [book.publisher, book.year].filter(Boolean).join(' · ');
+    if (pubYear) meta.push(`<span class="pub-year">${escapeHtml(pubYear)}</span>`);
+
+    return `<div class="card">
+      ${cover}
+      <div class="card-body">
+        <div class="card-title">${escapeHtml(book.title)}</div>
+        ${book.author ? `<div class="card-author">${escapeHtml(book.author)}</div>` : ''}
+        <div class="card-meta">${meta.join('')}</div>
+      </div>
+    </div>`;
+  }
+
+  function render(list) {
+    grid.innerHTML = list.length
+      ? list.map(cardHtml).join('')
+      : '<div class="empty">No books match that search.</div>';
+    resultCount.textContent = list.length === BOOKS.length ? '' : `${list.length} of ${BOOKS.length} shown`;
+  }
+
+  function norm(s) { return (s || '').toLowerCase(); }
+
+  function applySearch() {
+    const q = norm(searchInput.value.trim());
+    if (!q) { render(BOOKS); return; }
+    render(BOOKS.filter((b) => norm(b.title).includes(q) || norm(b.series).includes(q) || norm(b.author).includes(q)));
+  }
+
+  searchInput.addEventListener('input', applySearch);
+
+  const authorCount = new Set(BOOKS.map((b) => b.author).filter(Boolean)).size;
+  const seriesCount = new Set(BOOKS.map((b) => b.series).filter(Boolean)).size;
+  statsEl.innerHTML = `<strong>${BOOKS.length}</strong> books &middot; <strong>${authorCount}</strong> authors &middot; <strong>${seriesCount}</strong> series`;
+
+  render(BOOKS);
+</script>
