@@ -192,15 +192,19 @@
   .card {
     display: flex;
     flex-direction: column;
+    height: 100%;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 10px;
     overflow: hidden;
     box-shadow: var(--shadow);
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
   }
 
-  .card:hover { transform: translateY(-3px); }
+  .card:hover {
+    transform: translateY(-3px);
+    border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+  }
 
   .cover-wrap {
     aspect-ratio: 2 / 3;
@@ -214,7 +218,10 @@
     height: 100%;
     object-fit: cover;
     display: block;
+    transition: transform 0.4s ease;
   }
+
+  .card:hover .cover-wrap img { transform: scale(1.04); }
 
   .cover-fallback {
     width: 100%;
@@ -243,7 +250,8 @@
   .card-body {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    flex: 1;
+    gap: 8px;
     padding: 12px;
   }
 
@@ -252,39 +260,39 @@
     font-weight: 700;
     font-size: 14.5px;
     line-height: 1.3;
+    min-height: 2.6em;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
 
-  .card-author {
-    display: block;
-    width: 100%;
+  .card-meta {
+    margin-top: auto;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0 6px;
+    min-height: 2.5em;
+  }
+
+  .meta-link {
     font: inherit;
-    font-size: 12.5px;
-    text-align: left;
+    font-size: 12px;
     color: var(--text-muted);
     background: none;
     border: none;
     padding: 0;
+    min-width: 0;
+    max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     cursor: pointer;
   }
 
-  .card-author:hover { color: var(--accent-strong); text-decoration: underline; }
-  .card-author:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
-
-  .card-meta {
-    margin-top: auto;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 6px;
-    padding-top: 4px;
-  }
+  .meta-link:hover { color: var(--accent-strong); text-decoration: underline; }
+  .meta-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
 
   .series-tag {
     font: inherit;
@@ -293,8 +301,9 @@
     color: var(--tag);
     background: var(--tag-bg);
     border: none;
-    padding: 3px 8px;
+    padding: 2px 8px;
     border-radius: 100px;
+    min-width: 0;
     max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -306,10 +315,17 @@
   .series-tag:hover { background: color-mix(in srgb, var(--tag) 30%, var(--tag-bg)); }
   .series-tag:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-  .pub-year {
-    font-size: 11.5px;
+  .meta-dot {
+    color: var(--text-muted);
+    opacity: 0.55;
+    font-size: 11px;
+  }
+
+  .meta-year {
+    font-size: 12px;
     color: var(--text-muted);
     white-space: nowrap;
+    font-variant-numeric: tabular-nums;
   }
 
   .empty {
@@ -434,7 +450,7 @@
 
   let filtered = BOOKS;
   let currentPage = 1;
-  let activeFilter = null; // { type: 'author' | 'series', value: string }
+  let activeFilter = null; // { type: 'author' | 'series' | 'publisher', value: string }
 
   function escapeHtml(str) {
     return str.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -446,16 +462,17 @@
       : `<div class="cover-wrap"><div class="cover-fallback"><div class="ft">${escapeHtml(book.title)}</div>${book.author ? `<div class="fa">${escapeHtml(book.author)}</div>` : ''}</div></div>`;
 
     const meta = [];
+    if (book.author) meta.push(`<button type="button" class="meta-link" data-filter-type="author" data-filter-value="${escapeHtml(book.author)}" title="Show all books by ${escapeHtml(book.author)}">${escapeHtml(book.author)}</button>`);
     if (book.series) meta.push(`<button type="button" class="series-tag" data-filter-type="series" data-filter-value="${escapeHtml(book.series)}" title="Show all books in ${escapeHtml(book.series)}">${escapeHtml(book.series)}</button>`);
-    const pubYear = [book.publisher, book.year].filter(Boolean).join(' · ');
-    if (pubYear) meta.push(`<span class="pub-year">${escapeHtml(pubYear)}</span>`);
+    if (book.publisher) meta.push(`<button type="button" class="meta-link" data-filter-type="publisher" data-filter-value="${escapeHtml(book.publisher)}" title="Show all books from ${escapeHtml(book.publisher)}">${escapeHtml(book.publisher)}</button>`);
+    if (book.year) meta.push(`<span class="meta-year">${escapeHtml(book.year)}</span>`);
+    const metaHtml = meta.join('<span class="meta-dot">&middot;</span>');
 
     return `<div class="card">
       ${cover}
       <div class="card-body">
         <div class="card-title">${escapeHtml(book.title)}</div>
-        ${book.author ? `<button type="button" class="card-author" data-filter-type="author" data-filter-value="${escapeHtml(book.author)}" title="Show all books by ${escapeHtml(book.author)}">${escapeHtml(book.author)}</button>` : ''}
-        <div class="card-meta">${meta.join('')}</div>
+        <div class="card-meta">${metaHtml}</div>
       </div>
     </div>`;
   }
@@ -488,7 +505,7 @@
   function updateFilterBar() {
     if (!activeFilter) { filterBar.hidden = true; return; }
     filterBar.hidden = false;
-    const kind = activeFilter.type === 'author' ? 'Author' : 'Series';
+    const kind = activeFilter.type === 'author' ? 'Author' : activeFilter.type === 'series' ? 'Series' : 'Publisher';
     filterLabel.innerHTML = `${kind}: <strong>${escapeHtml(activeFilter.value)}</strong>`;
   }
 
