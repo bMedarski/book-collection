@@ -1,13 +1,19 @@
 const fs = require('fs');
 const path = require('path');
 
-const csvPath = path.join(__dirname, '..', 'data', 'fantasy.csv');
-const outPath = path.join(__dirname, '..', 'data', 'books.json');
+const csvName = process.argv[2] || 'fantasy.csv';
+const outName = process.argv[3] || 'books.json';
+const csvPath = path.join(__dirname, '..', 'data', csvName);
+const outPath = path.join(__dirname, '..', 'data', outName);
 
 const lines = fs.readFileSync(csvPath, 'utf8').split('\n').filter((l) => l.trim() !== '');
 const rows = lines.slice(1);
 
-const ISBN_RE = /^[0-9]{9,12}[0-9XxХх]$/;
+// A real ISBN-10/13 is 10 or 13 chars, but some source rows have garbled,
+// concatenated digit strings in this slot (data-entry mistakes) -- widen the
+// range so those still get recognized as "the isbn slot" and popped, even
+// though the stored value itself is junk we can't fix here.
+const ISBN_RE = /^[0-9][0-9XxХх/-]{4,19}$/;
 const YEAR_RE = /^\d{4}$/;
 
 function splitLine(line) {

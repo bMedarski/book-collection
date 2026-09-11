@@ -3,14 +3,29 @@ const path = require('path');
 
 const root = path.join(__dirname, '..');
 const template = fs.readFileSync(path.join(root, 'template.html'), 'utf8');
-const books = JSON.parse(fs.readFileSync(path.join(root, 'data', 'books.json'), 'utf8'));
 
-const dataJson = JSON.stringify(books).replace(/</g, '\\u003c');
+const SHELF_FILES = [
+  { key: 'fantasy', label: 'Fantasy', file: 'books.json' },
+  { key: 'others', label: 'Other Books', file: 'others.json' },
+];
+
+const shelves = SHELF_FILES.map(({ key, label, file }) => {
+  const books = JSON.parse(fs.readFileSync(path.join(root, 'data', file), 'utf8'));
+  return {
+    key,
+    label,
+    books: books.map((b) => ({ ...b, id: `${key}-${b.id}`, shelfKey: key })),
+  };
+});
+
+const dataJson = JSON.stringify(shelves).replace(/</g, '\\u003c');
 
 const output = template.replace(
-  '/*__BOOKS_DATA__*/[]/*__END_BOOKS_DATA__*/',
+  '/*__SHELVES_DATA__*/[]/*__END_SHELVES_DATA__*/',
   dataJson
 );
 
 fs.writeFileSync(path.join(root, 'index.html'), output, 'utf8');
-console.log(`Wrote index.html with ${books.length} books (${(output.length / 1024).toFixed(0)} KB)`);
+const total = shelves.reduce((n, s) => n + s.books.length, 0);
+console.log(`Wrote index.html with ${total} books across ${shelves.length} shelves (${(output.length / 1024).toFixed(0)} KB)`);
+shelves.forEach((s) => console.log(`  ${s.label}: ${s.books.length}`));

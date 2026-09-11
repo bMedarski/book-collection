@@ -110,6 +110,36 @@
 
   #browseView[hidden], #bookView[hidden] { display: none; }
 
+  .tabs {
+    display: flex;
+    gap: 4px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: -4px;
+  }
+
+  .tab {
+    font: inherit;
+    font-size: 14.5px;
+    font-weight: 600;
+    color: var(--text-muted);
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    padding: 8px 4px 12px;
+    margin-bottom: -1px;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+  }
+
+  .tab + .tab { margin-left: 14px; }
+
+  .tab:hover { color: var(--text); }
+
+  .tab[aria-selected="true"] {
+    color: var(--text);
+    border-bottom-color: var(--accent);
+  }
+
   .search-row {
     display: flex;
     flex-wrap: wrap;
@@ -608,6 +638,7 @@
 </div>
 
 <div id="browseView">
+  <div class="tabs" id="shelfTabs" role="tablist"></div>
   <div class="search-row">
     <div class="search-box">
       <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
@@ -635,12 +666,20 @@
   <div id="bookViewContent"></div>
 </div>
 
-<footer>Snapshot of the Fantasy tab from your library spreadsheet &middot; ask to refresh after adding books.</footer>
+<footer>Snapshot of the Fantasy and Other Books tabs from your library spreadsheet &middot; ask to refresh after adding books.</footer>
 
 <script>
   const PAGE_SIZE = 24;
-  // Newest additions (end of the spreadsheet) shown first.
-  const BOOKS = (/*__BOOKS_DATA__*/[]/*__END_BOOKS_DATA__*/).slice().reverse();
+  // Newest additions (end of the spreadsheet) shown first, within each shelf.
+  const SHELVES = (/*__SHELVES_DATA__*/[]/*__END_SHELVES_DATA__*/).map((s) => ({
+    ...s,
+    books: s.books.slice().reverse(),
+  }));
+
+  const ALL_BOOKS_BY_ID = new Map();
+  SHELVES.forEach((s) => s.books.forEach((b) => ALL_BOOKS_BY_ID.set(b.id, b)));
+
+  function shelfByKey(key) { return SHELVES.find((s) => s.key === key); }
 
   const grid = document.getElementById('grid');
   const searchInput = document.getElementById('search');
@@ -658,9 +697,10 @@
   const bookViewContent = document.getElementById('bookViewContent');
   const homeLink = document.getElementById('homeLink');
   const backToShelfBtn = document.getElementById('backToShelf');
+  const shelfTabs = document.getElementById('shelfTabs');
 
-  const BOOKS_BY_ID = new Map(BOOKS.map((b) => [b.id, b]));
-
+  let activeShelfKey = SHELVES[0].key;
+  let BOOKS = shelfByKey(activeShelfKey).books;
   let filtered = BOOKS;
   let currentPage = 1;
   let activeFilter = null; // { type: 'author' | 'series' | 'publisher', value: string }
@@ -694,10 +734,10 @@
 
   function refreshReadUi() {
     renderPage();
-    const m = location.hash.match(/^#\/book\/(\d+)/);
+    const m = location.hash.match(/^#\/book\/([\w-]+)/);
     const toggle = document.getElementById('readToggle');
-    if (m && toggle && Number(toggle.dataset.bookId) === Number(m[1])) {
-      toggle.checked = isRead(Number(m[1]));
+    if (m && toggle && toggle.dataset.bookId === m[1]) {
+      toggle.checked = isRead(m[1]);
       const label = document.getElementById('readToggleLabel');
       if (label) label.textContent = toggle.checked ? 'Read' : 'Not read';
     }
@@ -859,12 +899,34 @@
 
   function openBook(id) { location.hash = '#/book/' + id; }
 
+  function renderTabs() {
+    shelfTabs.innerHTML = SHELVES.map((s) => `<button type="button" class="tab" data-shelf-key="${escapeHtml(s.key)}" role="tab" aria-selected="${s.key === activeShelfKey}">${escapeHtml(s.label)}</button>`).join('');
+  }
+
+  function updateStats() {
+    const authorCount = new Set(BOOKS.map((b) => b.author).filter(Boolean)).size;
+    const seriesCount = new Set(BOOKS.map((b) => b.series).filter(Boolean)).size;
+    statsEl.innerHTML = `<strong>${BOOKS.length}</strong> books &middot; <strong>${authorCount}</strong> authors &middot; <strong>${seriesCount}</strong> series`;
+  }
+
+  function switchShelf(key) {
+    if (key === activeShelfKey || !shelfByKey(key)) return;
+    activeShelfKey = key;
+    BOOKS = shelfByKey(key).books;
+    activeFilter = null;
+    searchInput.value = '';
+    renderTabs();
+    updateStats();
+    recompute();
+  }
+
   function showBrowse() {
     bookView.hidden = true;
     browseView.hidden = false;
   }
 
   function showBook(book) {
+    if (book.shelfKey !== activeShelfKey) switchShelf(book.shelfKey);
     bookViewContent.innerHTML = bookDetailHtml(book);
     browseView.hidden = true;
     bookView.hidden = false;
@@ -872,8 +934,8 @@
   }
 
   function route() {
-    const m = location.hash.match(/^#\/book\/(\d+)/);
-    const book = m && BOOKS_BY_ID.get(Number(m[1]));
+    const m = location.hash.match(/^#\/book\/([\w-]+)/);
+    const book = m && ALL_BOOKS_BY_ID.get(m[1]);
     if (book) showBook(book);
     else showBrowse();
   }
@@ -883,15 +945,17 @@
   document.addEventListener('click', (e) => {
     const filterBtn = e.target.closest('[data-filter-type]');
     if (filterBtn) { setFilter(filterBtn.dataset.filterType, filterBtn.dataset.filterValue); return; }
+    const tabBtn = e.target.closest('[data-shelf-key]');
+    if (tabBtn) { switchShelf(tabBtn.dataset.shelfKey); return; }
     const card = e.target.closest('.card');
-    if (card && card.dataset.bookId) openBook(Number(card.dataset.bookId));
+    if (card && card.dataset.bookId) openBook(card.dataset.bookId);
   });
 
   document.addEventListener('change', (e) => {
     const toggle = e.target.closest('#readToggle');
     if (!toggle) return;
     const checked = toggle.checked;
-    setRead(Number(toggle.dataset.bookId), checked);
+    setRead(toggle.dataset.bookId, checked);
     const label = document.getElementById('readToggleLabel');
     if (label) label.textContent = checked ? 'Read' : 'Not read';
   });
@@ -911,10 +975,8 @@
     renderPage();
   });
 
-  const authorCount = new Set(BOOKS.map((b) => b.author).filter(Boolean)).size;
-  const seriesCount = new Set(BOOKS.map((b) => b.series).filter(Boolean)).size;
-  statsEl.innerHTML = `<strong>${BOOKS.length}</strong> books &middot; <strong>${authorCount}</strong> authors &middot; <strong>${seriesCount}</strong> series`;
-
+  renderTabs();
+  updateStats();
   renderPage();
   route();
   initReadStore();
