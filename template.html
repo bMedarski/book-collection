@@ -4,51 +4,51 @@
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=PT+Sans:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #f1ede2;
-    --surface: #fbf9f3;
+    --bg: #f2f5ee;
+    --surface: #ffffff;
     --surface-raised: #ffffff;
-    --text: #24211b;
-    --text-muted: #6d6555;
-    --border: #ddd4c0;
-    --accent: #90621a;
-    --accent-strong: #6f4c14;
-    --accent-contrast: #fff8ec;
-    --tag: #3c6259;
-    --tag-bg: rgba(60, 98, 89, 0.12);
-    --shadow: 0 1px 2px rgba(36, 33, 27, 0.06), 0 8px 20px -12px rgba(36, 33, 27, 0.18);
+    --text: #212a20;
+    --text-muted: #6c7967;
+    --border: #dde5d5;
+    --accent: #d9604a;
+    --accent-strong: #b3492f;
+    --accent-contrast: #fff6f2;
+    --tag: #4c7d68;
+    --tag-bg: rgba(76, 125, 104, 0.12);
+    --shadow: 0 1px 2px rgba(23, 31, 21, 0.06), 0 8px 20px -12px rgba(23, 31, 21, 0.18);
     color-scheme: light;
   }
 
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --bg: #1a1815;
-      --surface: #232019;
-      --surface-raised: #2a271f;
-      --text: #ede6d6;
-      --text-muted: #a89b83;
-      --border: #3a352a;
-      --accent: #dcaa53;
-      --accent-strong: #f0c274;
-      --accent-contrast: #201a0e;
-      --tag: #83b6a4;
-      --tag-bg: rgba(131, 182, 164, 0.16);
+      --bg: #181d17;
+      --surface: #212721;
+      --surface-raised: #262e26;
+      --text: #eaf0e6;
+      --text-muted: #9bab94;
+      --border: #37402f;
+      --accent: #f18265;
+      --accent-strong: #f6a488;
+      --accent-contrast: #221009;
+      --tag: #82b79c;
+      --tag-bg: rgba(130, 183, 156, 0.16);
       --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 24px -14px rgba(0, 0, 0, 0.6);
       color-scheme: dark;
     }
   }
 
   :root[data-theme="dark"] {
-    --bg: #1a1815;
-    --surface: #232019;
-    --surface-raised: #2a271f;
-    --text: #ede6d6;
-    --text-muted: #a89b83;
-    --border: #3a352a;
-    --accent: #dcaa53;
-    --accent-strong: #f0c274;
-    --accent-contrast: #201a0e;
-    --tag: #83b6a4;
-    --tag-bg: rgba(131, 182, 164, 0.16);
+    --bg: #181d17;
+    --surface: #212721;
+    --surface-raised: #262e26;
+    --text: #eaf0e6;
+    --text-muted: #9bab94;
+    --border: #37402f;
+    --accent: #f18265;
+    --accent-strong: #f6a488;
+    --accent-contrast: #221009;
+    --tag: #82b79c;
+    --tag-bg: rgba(130, 183, 156, 0.16);
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 24px -14px rgba(0, 0, 0, 0.6);
     color-scheme: dark;
   }
@@ -450,6 +450,7 @@
     border-radius: 12px;
     overflow: hidden;
     background: var(--border);
+    border: 1px solid var(--border);
     box-shadow: var(--shadow);
   }
 
@@ -480,22 +481,24 @@
     font-size: clamp(24px, 3.4vw, 34px);
     line-height: 1.15;
     text-wrap: balance;
-    margin: 0 0 22px;
+    margin: 0 0 26px;
   }
 
   .detail-fields {
     display: flex;
     flex-direction: column;
-    gap: 14px;
   }
 
   .detail-field {
     display: flex;
-    flex-direction: column;
-    gap: 3px;
+    align-items: baseline;
+    gap: 20px;
+    padding-block: 13px;
+    border-top: 1px solid var(--border);
   }
 
   .detail-field dt {
+    flex: 0 0 96px;
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.08em;
@@ -504,6 +507,8 @@
   }
 
   .detail-field dd {
+    flex: 1;
+    min-width: 0;
     margin: 0;
     font-size: 16px;
   }
@@ -511,6 +516,7 @@
   .detail-field dd .meta-link {
     font-size: 16px;
     color: var(--text);
+    white-space: normal;
   }
 
   .detail-field dd .series-tag {
@@ -523,16 +529,27 @@
     font-variant-numeric: tabular-nums;
   }
 
+  .read-status {
+    margin-top: 6px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+  }
+
+  .read-status-label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+  }
+
   .read-toggle-row {
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 10px 14px;
-    margin-bottom: 24px;
-    background: var(--tag-bg);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 600;
   }
 
@@ -768,16 +785,19 @@
     return `<div class="detail-layout">
       <div class="detail-cover">${coverInner(book)}</div>
       <div class="detail-info">
-        <div class="detail-eyebrow">Fantasy Shelf</div>
+        <div class="detail-eyebrow">Personal Library &middot; Fantasy Shelf</div>
         <h2 class="detail-title">${escapeHtml(book.title)}</h2>
-        <div class="read-toggle-row">
-          <label class="switch">
-            <input type="checkbox" id="readToggle" data-book-id="${book.id}" ${read ? 'checked' : ''} aria-label="Mark as read">
-            <span class="switch-track"><span class="switch-thumb"></span></span>
-          </label>
-          <span id="readToggleLabel">${read ? 'Read' : 'Not read'}</span>
-        </div>
         <dl class="detail-fields">${rows}</dl>
+        <div class="read-status">
+          <span class="read-status-label">Reading status</span>
+          <div class="read-toggle-row">
+            <label class="switch">
+              <input type="checkbox" id="readToggle" data-book-id="${book.id}" ${read ? 'checked' : ''} aria-label="Mark as read">
+              <span class="switch-track"><span class="switch-thumb"></span></span>
+            </label>
+            <span id="readToggleLabel">${read ? 'Read' : 'Not read'}</span>
+          </div>
+        </div>
       </div>
     </div>`;
   }
