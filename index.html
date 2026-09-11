@@ -190,34 +190,168 @@
     white-space: nowrap;
   }
 
-  .filter-bar {
-    display: flex;
+  .filter-panel { position: relative; }
+
+  .filter-panel > summary {
+    list-style: none;
+    display: inline-flex;
     align-items: center;
-    flex-wrap: wrap;
-    gap: 10px;
-    padding: 10px 14px;
-    background: var(--tag-bg);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    font-size: 14px;
-  }
-
-  .filter-bar strong { color: var(--tag); }
-
-  .filter-bar button {
+    gap: 7px;
     font: inherit;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
     color: var(--text);
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 100px;
-    padding: 5px 12px;
+    border-radius: 10px;
+    padding: 10px 16px;
     cursor: pointer;
-    transition: border-color 0.15s, color 0.15s;
+    transition: border-color 0.15s;
   }
 
-  .filter-bar button:hover { border-color: var(--accent); color: var(--accent-strong); }
+  .filter-panel > summary::-webkit-details-marker { display: none; }
+  .filter-panel > summary:hover,
+  .filter-panel[open] > summary { border-color: var(--accent); }
+
+  .filter-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 100px;
+    background: var(--accent);
+    color: var(--accent-contrast);
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .filter-panel-body {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    z-index: 20;
+    width: min(520px, calc(100vw - 32px));
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+    padding: 18px;
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+  }
+
+  @media (max-width: 480px) {
+    .filter-panel-body { grid-template-columns: 1fr; }
+  }
+
+  .filter-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .filter-field input, .filter-field select {
+    font-family: "PT Sans", sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: normal;
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 10px;
+  }
+
+  .filter-field input:focus, .filter-field select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+  }
+
+  #clearFiltersBtn {
+    grid-column: 1 / -1;
+    justify-self: start;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+    background: none;
+    border: none;
+    padding: 4px 0 0;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
+  #clearFiltersBtn:hover { color: var(--accent-strong); }
+
+  .filter-bar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 14px;
+  }
+
+  #filterLabel {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px 6px 12px;
+    background: var(--tag-bg);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    font-size: 13px;
+  }
+
+  .filter-chip strong { color: var(--tag); font-weight: 700; }
+
+  .chip-remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    font-size: 13px;
+    line-height: 1;
+    color: var(--text-muted);
+    background: none;
+    border: none;
+    border-radius: 50%;
+    padding: 0;
+    cursor: pointer;
+  }
+
+  .chip-remove:hover { color: var(--text); background: color-mix(in srgb, var(--tag) 20%, transparent); }
+
+  .filter-bar > button {
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+    background: none;
+    border: none;
+    padding: 5px 4px;
+    cursor: pointer;
+    text-decoration: underline;
+  }
+
+  .filter-bar > button:hover { color: var(--accent-strong); }
 
   #grid {
     display: grid;
@@ -657,11 +791,44 @@
       <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
       <input id="search" type="search" placeholder="Search title, series, or author&hellip;" autocomplete="off" />
     </div>
+    <details class="filter-panel" id="filterPanel">
+      <summary>Filters<span class="filter-count" id="filterCount" hidden>0</span></summary>
+      <div class="filter-panel-body">
+        <label class="filter-field">
+          <span>Author</span>
+          <input type="text" id="filterAuthor" list="authorOptions" placeholder="Any author" autocomplete="off">
+        </label>
+        <label class="filter-field">
+          <span>Series</span>
+          <input type="text" id="filterSeries" list="seriesOptions" placeholder="Any series" autocomplete="off">
+        </label>
+        <label class="filter-field">
+          <span>Publisher</span>
+          <input type="text" id="filterPublisher" list="publisherOptions" placeholder="Any publisher" autocomplete="off">
+        </label>
+        <label class="filter-field">
+          <span>Year</span>
+          <select id="filterYear"><option value="">Any year</option></select>
+        </label>
+        <label class="filter-field">
+          <span>Read status</span>
+          <select id="filterRead">
+            <option value="">Any</option>
+            <option value="read">Read</option>
+            <option value="unread">Not read</option>
+          </select>
+        </label>
+        <button type="button" id="clearFiltersBtn">Clear filters</button>
+      </div>
+      <datalist id="authorOptions"></datalist>
+      <datalist id="seriesOptions"></datalist>
+      <datalist id="publisherOptions"></datalist>
+    </details>
     <div class="result-count" id="resultCount"></div>
   </div>
   <div class="filter-bar" id="filterBar" hidden>
     <span id="filterLabel"></span>
-    <button type="button" id="clearFilter">&larr; All books</button>
+    <button type="button" id="clearFilter">Clear all</button>
   </div>
   <div class="stats" id="stats"></div>
 
@@ -711,12 +878,23 @@
   const homeLink = document.getElementById('homeLink');
   const backToShelfBtn = document.getElementById('backToShelf');
   const shelfTabs = document.getElementById('shelfTabs');
+  const filterPanel = document.getElementById('filterPanel');
+  const filterCountEl = document.getElementById('filterCount');
+  const filterAuthorInput = document.getElementById('filterAuthor');
+  const filterSeriesInput = document.getElementById('filterSeries');
+  const filterPublisherInput = document.getElementById('filterPublisher');
+  const filterYearSelect = document.getElementById('filterYear');
+  const filterReadSelect = document.getElementById('filterRead');
+  const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+  const authorOptionsEl = document.getElementById('authorOptions');
+  const seriesOptionsEl = document.getElementById('seriesOptions');
+  const publisherOptionsEl = document.getElementById('publisherOptions');
 
   let activeShelfKey = SHELVES[0].key;
   let BOOKS = shelfByKey(activeShelfKey).books;
   let filtered = BOOKS;
   let currentPage = 1;
-  let activeFilter = null; // { type: 'author' | 'series' | 'publisher', value: string }
+  let filters = { author: '', series: '', publisher: '', year: '', read: '' };
 
   // Read/unread status: uses the artifact's db capability when this page
   // runs on claude.ai (synced, persists server-side); falls back to
@@ -894,34 +1072,79 @@
 
   function norm(s) { return (s || '').toLowerCase(); }
 
+  function filterChip(label, value, field) {
+    return `<span class="filter-chip">${label}: <strong>${escapeHtml(value)}</strong><button type="button" class="chip-remove" data-remove-filter="${field}" aria-label="Remove ${label} filter">&times;</button></span>`;
+  }
+
   function updateFilterBar() {
-    if (!activeFilter) { filterBar.hidden = true; return; }
-    filterBar.hidden = false;
-    const kind = activeFilter.type === 'author' ? 'Author' : activeFilter.type === 'series' ? 'Series' : 'Publisher';
-    filterLabel.innerHTML = `${kind}: <strong>${escapeHtml(activeFilter.value)}</strong>`;
+    const chips = [];
+    if (filters.author) chips.push(filterChip('Author', filters.author, 'author'));
+    if (filters.series) chips.push(filterChip('Series', filters.series, 'series'));
+    if (filters.publisher) chips.push(filterChip('Publisher', filters.publisher, 'publisher'));
+    if (filters.year) chips.push(filterChip('Year', filters.year, 'year'));
+    if (filters.read) chips.push(filterChip('Status', filters.read === 'read' ? 'Read' : 'Not read', 'read'));
+
+    filterBar.hidden = chips.length === 0;
+    filterLabel.innerHTML = chips.join('');
+
+    const activeCount = chips.length;
+    filterCountEl.hidden = activeCount === 0;
+    filterCountEl.textContent = activeCount;
+  }
+
+  function matchesFilters(b) {
+    if (filters.author && !norm(b.author).includes(norm(filters.author))) return false;
+    if (filters.series && !norm(b.series).includes(norm(filters.series))) return false;
+    if (filters.publisher && !norm(b.publisher).includes(norm(filters.publisher))) return false;
+    if (filters.year && b.year !== filters.year) return false;
+    if (filters.read === 'read' && !isRead(b.id)) return false;
+    if (filters.read === 'unread' && isRead(b.id)) return false;
+    return true;
   }
 
   function recompute() {
-    if (activeFilter) {
-      filtered = BOOKS.filter((b) => b[activeFilter.type] === activeFilter.value);
-    } else {
-      const q = norm(searchInput.value.trim());
-      filtered = q
-        ? BOOKS.filter((b) => norm(b.title).includes(q) || norm(b.series).includes(q) || norm(b.author).includes(q))
-        : BOOKS;
-    }
+    const q = norm(searchInput.value.trim());
+    filtered = BOOKS.filter((b) => matchesFilters(b) && (!q || norm(b.title).includes(q) || norm(b.series).includes(q) || norm(b.author).includes(q)));
     currentPage = 1;
     updateFilterBar();
     renderPage();
   }
 
-  function setFilter(type, value) {
+  function syncFilterInputs() {
+    filterAuthorInput.value = filters.author;
+    filterSeriesInput.value = filters.series;
+    filterPublisherInput.value = filters.publisher;
+    filterYearSelect.value = filters.year;
+    filterReadSelect.value = filters.read;
+  }
+
+  function clearFilters() {
+    filters = { author: '', series: '', publisher: '', year: '', read: '' };
+    syncFilterInputs();
+    recompute();
+  }
+
+  function setFieldFilter(type, value) {
     if (!value) return;
-    activeFilter = { type, value };
+    filters = { author: '', series: '', publisher: '', year: '', read: '' };
+    filters[type] = value;
     searchInput.value = '';
+    syncFilterInputs();
     recompute();
     if (location.hash) location.hash = '';
     document.querySelector('.top').scrollIntoView({ block: 'start', behavior: 'smooth' });
+  }
+
+  function populateFilterOptions() {
+    const authors = [...new Set(BOOKS.map((b) => b.author).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+    const series = [...new Set(BOOKS.map((b) => b.series).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+    const publishers = [...new Set(BOOKS.map((b) => b.publisher).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+    const years = [...new Set(BOOKS.map((b) => b.year).filter(Boolean))].sort((a, b) => b.localeCompare(a));
+
+    authorOptionsEl.innerHTML = authors.map((a) => `<option value="${escapeHtml(a)}">`).join('');
+    seriesOptionsEl.innerHTML = series.map((s) => `<option value="${escapeHtml(s)}">`).join('');
+    publisherOptionsEl.innerHTML = publishers.map((p) => `<option value="${escapeHtml(p)}">`).join('');
+    filterYearSelect.innerHTML = '<option value="">Any year</option>' + years.map((y) => `<option value="${escapeHtml(y)}">${escapeHtml(y)}</option>`).join('');
   }
 
   function openBook(id) { location.hash = '#/book/' + id; }
@@ -940,10 +1163,12 @@
     if (key === activeShelfKey || !shelfByKey(key)) return;
     activeShelfKey = key;
     BOOKS = shelfByKey(key).books;
-    activeFilter = null;
+    filters = { author: '', series: '', publisher: '', year: '', read: '' };
+    syncFilterInputs();
     searchInput.value = '';
     renderTabs();
     updateStats();
+    populateFilterOptions();
     recompute();
   }
 
@@ -967,27 +1192,39 @@
     else showBrowse();
   }
 
-  searchInput.addEventListener('input', () => { activeFilter = null; recompute(); });
+  searchInput.addEventListener('input', () => recompute());
 
   document.addEventListener('click', (e) => {
     const filterBtn = e.target.closest('[data-filter-type]');
-    if (filterBtn) { setFilter(filterBtn.dataset.filterType, filterBtn.dataset.filterValue); return; }
+    if (filterBtn) { setFieldFilter(filterBtn.dataset.filterType, filterBtn.dataset.filterValue); return; }
     const tabBtn = e.target.closest('[data-shelf-key]');
     if (tabBtn) { switchShelf(tabBtn.dataset.shelfKey); return; }
+    const chipRemove = e.target.closest('[data-remove-filter]');
+    if (chipRemove) { filters[chipRemove.dataset.removeFilter] = ''; syncFilterInputs(); recompute(); return; }
     const card = e.target.closest('.card');
     if (card && card.dataset.bookId) openBook(card.dataset.bookId);
+    if (!e.target.closest('#filterPanel') && filterPanel.open) filterPanel.open = false;
   });
 
   document.addEventListener('change', (e) => {
     const toggle = e.target.closest('#readToggle');
-    if (!toggle) return;
-    const checked = toggle.checked;
-    setRead(toggle.dataset.bookId, checked);
-    const label = document.getElementById('readToggleLabel');
-    if (label) label.textContent = checked ? 'Read' : 'Not read';
+    if (toggle) {
+      const checked = toggle.checked;
+      setRead(toggle.dataset.bookId, checked);
+      const label = document.getElementById('readToggleLabel');
+      if (label) label.textContent = checked ? 'Read' : 'Not read';
+      return;
+    }
   });
 
-  clearFilterBtn.addEventListener('click', () => { activeFilter = null; recompute(); });
+  filterAuthorInput.addEventListener('input', () => { filters.author = filterAuthorInput.value.trim(); recompute(); });
+  filterSeriesInput.addEventListener('input', () => { filters.series = filterSeriesInput.value.trim(); recompute(); });
+  filterPublisherInput.addEventListener('input', () => { filters.publisher = filterPublisherInput.value.trim(); recompute(); });
+  filterYearSelect.addEventListener('change', () => { filters.year = filterYearSelect.value; recompute(); });
+  filterReadSelect.addEventListener('change', () => { filters.read = filterReadSelect.value; recompute(); });
+  clearFiltersBtn.addEventListener('click', clearFilters);
+
+  clearFilterBtn.addEventListener('click', clearFilters);
 
   homeLink.addEventListener('click', (e) => { e.preventDefault(); location.hash = ''; });
   backToShelfBtn.addEventListener('click', () => { location.hash = ''; });
@@ -1004,6 +1241,7 @@
 
   renderTabs();
   updateStats();
+  populateFilterOptions();
   renderPage();
   route();
   initReadStore();
