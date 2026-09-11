@@ -150,6 +150,35 @@
     white-space: nowrap;
   }
 
+  .filter-bar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 10px 14px;
+    background: var(--tag-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 14px;
+  }
+
+  .filter-bar strong { color: var(--tag); }
+
+  .filter-bar button {
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 5px 12px;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+
+  .filter-bar button:hover { border-color: var(--accent); color: var(--accent-strong); }
+
   #grid {
     display: grid;
     grid-template-columns: repeat(6, 1fr);
@@ -230,12 +259,23 @@
   }
 
   .card-author {
+    display: block;
+    width: 100%;
+    font: inherit;
     font-size: 12.5px;
+    text-align: left;
     color: var(--text-muted);
+    background: none;
+    border: none;
+    padding: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    cursor: pointer;
   }
+
+  .card-author:hover { color: var(--accent-strong); text-decoration: underline; }
+  .card-author:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
 
   .card-meta {
     margin-top: auto;
@@ -247,17 +287,24 @@
   }
 
   .series-tag {
+    font: inherit;
     font-size: 11px;
     font-weight: 600;
     color: var(--tag);
     background: var(--tag-bg);
+    border: none;
     padding: 3px 8px;
     border-radius: 100px;
     max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    cursor: pointer;
+    transition: background 0.15s;
   }
+
+  .series-tag:hover { background: color-mix(in srgb, var(--tag) 30%, var(--tag-bg)); }
+  .series-tag:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
   .pub-year {
     font-size: 11.5px;
@@ -351,6 +398,10 @@
     </div>
     <div class="result-count" id="resultCount"></div>
   </div>
+  <div class="filter-bar" id="filterBar" hidden>
+    <span id="filterLabel"></span>
+    <button type="button" id="clearFilter">&larr; All books</button>
+  </div>
   <div class="stats" id="stats"></div>
 </div>
 
@@ -377,9 +428,13 @@
   const nextBtn = document.getElementById('nextPage');
   const pageInput = document.getElementById('pageInput');
   const pageTotalEl = document.getElementById('pageTotal');
+  const filterBar = document.getElementById('filterBar');
+  const filterLabel = document.getElementById('filterLabel');
+  const clearFilterBtn = document.getElementById('clearFilter');
 
   let filtered = BOOKS;
   let currentPage = 1;
+  let activeFilter = null; // { type: 'author' | 'series', value: string }
 
   function escapeHtml(str) {
     return str.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -391,7 +446,7 @@
       : `<div class="cover-wrap"><div class="cover-fallback"><div class="ft">${escapeHtml(book.title)}</div>${book.author ? `<div class="fa">${escapeHtml(book.author)}</div>` : ''}</div></div>`;
 
     const meta = [];
-    if (book.series) meta.push(`<span class="series-tag" title="${escapeHtml(book.series)}">${escapeHtml(book.series)}</span>`);
+    if (book.series) meta.push(`<button type="button" class="series-tag" data-filter-type="series" data-filter-value="${escapeHtml(book.series)}" title="Show all books in ${escapeHtml(book.series)}">${escapeHtml(book.series)}</button>`);
     const pubYear = [book.publisher, book.year].filter(Boolean).join(' · ');
     if (pubYear) meta.push(`<span class="pub-year">${escapeHtml(pubYear)}</span>`);
 
@@ -399,7 +454,7 @@
       ${cover}
       <div class="card-body">
         <div class="card-title">${escapeHtml(book.title)}</div>
-        ${book.author ? `<div class="card-author">${escapeHtml(book.author)}</div>` : ''}
+        ${book.author ? `<button type="button" class="card-author" data-filter-type="author" data-filter-value="${escapeHtml(book.author)}" title="Show all books by ${escapeHtml(book.author)}">${escapeHtml(book.author)}</button>` : ''}
         <div class="card-meta">${meta.join('')}</div>
       </div>
     </div>`;
@@ -430,16 +485,43 @@
 
   function norm(s) { return (s || '').toLowerCase(); }
 
-  function applySearch() {
-    const q = norm(searchInput.value.trim());
-    filtered = q
-      ? BOOKS.filter((b) => norm(b.title).includes(q) || norm(b.series).includes(q) || norm(b.author).includes(q))
-      : BOOKS;
+  function updateFilterBar() {
+    if (!activeFilter) { filterBar.hidden = true; return; }
+    filterBar.hidden = false;
+    const kind = activeFilter.type === 'author' ? 'Author' : 'Series';
+    filterLabel.innerHTML = `${kind}: <strong>${escapeHtml(activeFilter.value)}</strong>`;
+  }
+
+  function recompute() {
+    if (activeFilter) {
+      filtered = BOOKS.filter((b) => b[activeFilter.type] === activeFilter.value);
+    } else {
+      const q = norm(searchInput.value.trim());
+      filtered = q
+        ? BOOKS.filter((b) => norm(b.title).includes(q) || norm(b.series).includes(q) || norm(b.author).includes(q))
+        : BOOKS;
+    }
     currentPage = 1;
+    updateFilterBar();
     renderPage();
   }
 
-  searchInput.addEventListener('input', applySearch);
+  function setFilter(type, value) {
+    if (!value) return;
+    activeFilter = { type, value };
+    searchInput.value = '';
+    recompute();
+    document.querySelector('.top').scrollIntoView({ block: 'start', behavior: 'smooth' });
+  }
+
+  searchInput.addEventListener('input', () => { activeFilter = null; recompute(); });
+
+  grid.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-filter-type]');
+    if (btn) setFilter(btn.dataset.filterType, btn.dataset.filterValue);
+  });
+
+  clearFilterBtn.addEventListener('click', () => { activeFilter = null; recompute(); });
 
   prevBtn.addEventListener('click', () => { currentPage -= 1; renderPage(); });
   nextBtn.addEventListener('click', () => { currentPage += 1; renderPage(); });
