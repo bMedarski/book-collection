@@ -91,6 +91,9 @@
     text-wrap: balance;
   }
 
+  h1 a { text-decoration: none; transition: color 0.15s; }
+  h1 a:hover { color: var(--accent-strong); }
+
   .stats {
     font-size: 14px;
     color: var(--text-muted);
@@ -99,12 +102,17 @@
 
   .stats strong { color: var(--text); font-weight: 700; }
 
+  #browseView {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
   .search-row {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 14px;
-    margin-top: 4px;
   }
 
   .search-box {
@@ -198,6 +206,7 @@
     border-radius: 10px;
     overflow: hidden;
     box-shadow: var(--shadow);
+    cursor: pointer;
     transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
   }
 
@@ -397,6 +406,114 @@
     color: var(--text-muted);
   }
 
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-muted);
+    background: none;
+    border: none;
+    padding: 0;
+    margin-bottom: 24px;
+    cursor: pointer;
+  }
+
+  .back-link:hover { color: var(--accent-strong); }
+
+  .detail-layout {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 32px;
+    align-items: flex-start;
+  }
+
+  .detail-cover {
+    flex: 0 0 240px;
+    width: 240px;
+    max-width: 100%;
+    aspect-ratio: 2 / 3;
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--border);
+    box-shadow: var(--shadow);
+  }
+
+  .detail-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .detail-cover .cover-fallback .ft { font-size: 22px; }
+  .detail-cover .cover-fallback .fa { font-size: 14px; }
+
+  .detail-info {
+    flex: 1 1 320px;
+    min-width: 0;
+  }
+
+  .detail-eyebrow {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--tag);
+    margin-bottom: 8px;
+  }
+
+  .detail-title {
+    font-family: "PT Serif", Georgia, serif;
+    font-weight: 700;
+    font-size: clamp(24px, 3.4vw, 34px);
+    line-height: 1.15;
+    text-wrap: balance;
+    margin: 0 0 22px;
+  }
+
+  .detail-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .detail-field {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .detail-field dt {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .detail-field dd {
+    margin: 0;
+    font-size: 16px;
+  }
+
+  .detail-field dd .meta-link {
+    font-size: 16px;
+    color: var(--text);
+  }
+
+  .detail-field dd .series-tag {
+    font-size: 13px;
+    padding: 4px 12px;
+  }
+
+  .detail-field dd.plain {
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .card { transition: none; }
   }
@@ -405,8 +522,11 @@
 <div class="top">
   <div>
     <div class="eyebrow">Personal Library &middot; Fantasy Shelf</div>
-    <h1>The Fantasy Shelf</h1>
+    <h1><a href="#" id="homeLink">The Fantasy Shelf</a></h1>
   </div>
+</div>
+
+<div id="browseView">
   <div class="search-row">
     <div class="search-box">
       <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
@@ -419,14 +539,19 @@
     <button type="button" id="clearFilter">&larr; All books</button>
   </div>
   <div class="stats" id="stats"></div>
+
+  <div id="grid"></div>
+
+  <div class="pager">
+    <button id="prevPage" type="button">&larr; Prev</button>
+    <span class="pager-info">Page <input id="pageInput" type="text" inputmode="numeric" value="1" aria-label="Page number" /> of <span id="pageTotal">1</span></span>
+    <button id="nextPage" type="button">Next &rarr;</button>
+  </div>
 </div>
 
-<div id="grid"></div>
-
-<div class="pager">
-  <button id="prevPage" type="button">&larr; Prev</button>
-  <span class="pager-info">Page <input id="pageInput" type="text" inputmode="numeric" value="1" aria-label="Page number" /> of <span id="pageTotal">1</span></span>
-  <button id="nextPage" type="button">Next &rarr;</button>
+<div id="bookView" hidden>
+  <button type="button" class="back-link" id="backToShelf">&larr; Back to shelf</button>
+  <div id="bookViewContent"></div>
 </div>
 
 <footer>Snapshot of the Fantasy tab from your library spreadsheet &middot; ask to refresh after adding books.</footer>
@@ -447,6 +572,13 @@
   const filterBar = document.getElementById('filterBar');
   const filterLabel = document.getElementById('filterLabel');
   const clearFilterBtn = document.getElementById('clearFilter');
+  const browseView = document.getElementById('browseView');
+  const bookView = document.getElementById('bookView');
+  const bookViewContent = document.getElementById('bookViewContent');
+  const homeLink = document.getElementById('homeLink');
+  const backToShelfBtn = document.getElementById('backToShelf');
+
+  const BOOKS_BY_ID = new Map(BOOKS.map((b) => [b.id, b]));
 
   let filtered = BOOKS;
   let currentPage = 1;
@@ -456,23 +588,58 @@
     return str.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
 
-  function cardHtml(book) {
-    const cover = book.image
-      ? `<div class="cover-wrap"><img src="${escapeHtml(book.image)}" alt="Cover of ${escapeHtml(book.title)}" loading="lazy" onerror="this.parentElement.outerHTML='<div class=&quot;cover-wrap&quot;><div class=&quot;cover-fallback&quot;><div class=&quot;ft&quot;>' + this.alt.replace('Cover of ','') + '</div></div></div>';" /></div>`
-      : `<div class="cover-wrap"><div class="cover-fallback"><div class="ft">${escapeHtml(book.title)}</div>${book.author ? `<div class="fa">${escapeHtml(book.author)}</div>` : ''}</div></div>`;
+  function coverInner(book) {
+    return book.image
+      ? `<img src="${escapeHtml(book.image)}" alt="Cover of ${escapeHtml(book.title)}" loading="lazy" onerror="this.outerHTML='<div class=&quot;cover-fallback&quot;><div class=&quot;ft&quot;>' + this.alt.replace('Cover of ','') + '</div></div>';" />`
+      : `<div class="cover-fallback"><div class="ft">${escapeHtml(book.title)}</div>${book.author ? `<div class="fa">${escapeHtml(book.author)}</div>` : ''}</div>`;
+  }
 
-    const meta = [];
-    if (book.author) meta.push(`<button type="button" class="meta-link" data-filter-type="author" data-filter-value="${escapeHtml(book.author)}" title="Show all books by ${escapeHtml(book.author)}">${escapeHtml(book.author)}</button>`);
-    if (book.series) meta.push(`<button type="button" class="series-tag" data-filter-type="series" data-filter-value="${escapeHtml(book.series)}" title="Show all books in ${escapeHtml(book.series)}">${escapeHtml(book.series)}</button>`);
-    if (book.publisher) meta.push(`<button type="button" class="meta-link" data-filter-type="publisher" data-filter-value="${escapeHtml(book.publisher)}" title="Show all books from ${escapeHtml(book.publisher)}">${escapeHtml(book.publisher)}</button>`);
+  function authorBtn(book) {
+    return book.author ? `<button type="button" class="meta-link" data-filter-type="author" data-filter-value="${escapeHtml(book.author)}" title="Show all books by ${escapeHtml(book.author)}">${escapeHtml(book.author)}</button>` : '';
+  }
+
+  function seriesBtn(book) {
+    return book.series ? `<button type="button" class="series-tag" data-filter-type="series" data-filter-value="${escapeHtml(book.series)}" title="Show all books in ${escapeHtml(book.series)}">${escapeHtml(book.series)}</button>` : '';
+  }
+
+  function publisherBtn(book) {
+    return book.publisher ? `<button type="button" class="meta-link" data-filter-type="publisher" data-filter-value="${escapeHtml(book.publisher)}" title="Show all books from ${escapeHtml(book.publisher)}">${escapeHtml(book.publisher)}</button>` : '';
+  }
+
+  function cardHtml(book) {
+    const meta = [authorBtn(book), seriesBtn(book), publisherBtn(book)].filter(Boolean);
     if (book.year) meta.push(`<span class="meta-year">${escapeHtml(book.year)}</span>`);
     const metaHtml = meta.join('<span class="meta-dot">&middot;</span>');
 
-    return `<div class="card">
-      ${cover}
+    return `<div class="card" data-book-id="${book.id}">
+      <div class="cover-wrap">${coverInner(book)}</div>
       <div class="card-body">
         <div class="card-title">${escapeHtml(book.title)}</div>
         <div class="card-meta">${metaHtml}</div>
+      </div>
+    </div>`;
+  }
+
+  function detailField(label, valueHtml, plain) {
+    if (!valueHtml) return '';
+    return `<div class="detail-field"><dt>${label}</dt><dd${plain ? ' class="plain"' : ''}>${valueHtml}</dd></div>`;
+  }
+
+  function bookDetailHtml(book) {
+    const rows = [
+      detailField('Author', authorBtn(book)),
+      detailField('Series', seriesBtn(book)),
+      detailField('Publisher', publisherBtn(book)),
+      detailField('Year', book.year ? escapeHtml(book.year) : '', true),
+      detailField('ISBN', book.isbn ? escapeHtml(book.isbn) : '', true),
+    ].join('');
+
+    return `<div class="detail-layout">
+      <div class="detail-cover">${coverInner(book)}</div>
+      <div class="detail-info">
+        <div class="detail-eyebrow">Fantasy Shelf</div>
+        <h2 class="detail-title">${escapeHtml(book.title)}</h2>
+        <dl class="detail-fields">${rows}</dl>
       </div>
     </div>`;
   }
@@ -528,17 +695,45 @@
     activeFilter = { type, value };
     searchInput.value = '';
     recompute();
+    if (location.hash) location.hash = '';
     document.querySelector('.top').scrollIntoView({ block: 'start', behavior: 'smooth' });
+  }
+
+  function openBook(id) { location.hash = '#/book/' + id; }
+
+  function showBrowse() {
+    bookView.hidden = true;
+    browseView.hidden = false;
+  }
+
+  function showBook(book) {
+    bookViewContent.innerHTML = bookDetailHtml(book);
+    browseView.hidden = true;
+    bookView.hidden = false;
+    window.scrollTo(0, 0);
+  }
+
+  function route() {
+    const m = location.hash.match(/^#\/book\/(\d+)/);
+    const book = m && BOOKS_BY_ID.get(Number(m[1]));
+    if (book) showBook(book);
+    else showBrowse();
   }
 
   searchInput.addEventListener('input', () => { activeFilter = null; recompute(); });
 
-  grid.addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-filter-type]');
-    if (btn) setFilter(btn.dataset.filterType, btn.dataset.filterValue);
+  document.addEventListener('click', (e) => {
+    const filterBtn = e.target.closest('[data-filter-type]');
+    if (filterBtn) { setFilter(filterBtn.dataset.filterType, filterBtn.dataset.filterValue); return; }
+    const card = e.target.closest('.card');
+    if (card && card.dataset.bookId) openBook(Number(card.dataset.bookId));
   });
 
   clearFilterBtn.addEventListener('click', () => { activeFilter = null; recompute(); });
+
+  homeLink.addEventListener('click', (e) => { e.preventDefault(); location.hash = ''; });
+  backToShelfBtn.addEventListener('click', () => { location.hash = ''; });
+  window.addEventListener('hashchange', route);
 
   prevBtn.addEventListener('click', () => { currentPage -= 1; renderPage(); });
   nextBtn.addEventListener('click', () => { currentPage += 1; renderPage(); });
@@ -554,4 +749,5 @@
   statsEl.innerHTML = `<strong>${BOOKS.length}</strong> books &middot; <strong>${authorCount}</strong> authors &middot; <strong>${seriesCount}</strong> series`;
 
   renderPage();
+  route();
 </script>

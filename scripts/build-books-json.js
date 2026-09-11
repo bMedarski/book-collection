@@ -75,10 +75,10 @@ function assignTextFields(fields) {
   return { title: '', series: '', author: '', publisher: '' };
 }
 
-const books = rows.map((line) => {
+const books = rows.map((line, i) => {
   const { fields, year, isbn, image } = splitLine(line);
   const { title, series, author, publisher } = assignTextFields(fields);
-  return { title: title.trim(), series: series.trim(), author: author.trim(), publisher: publisher.trim(), year, isbn, image };
+  return { id: i, title: title.trim(), series: series.trim(), author: author.trim(), publisher: publisher.trim(), year, isbn, image };
 }).filter((b) => b.title);
 
 fs.writeFileSync(outPath, JSON.stringify(books, null, 2), 'utf8');
