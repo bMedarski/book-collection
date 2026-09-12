@@ -82,8 +82,13 @@ function isEnglish(info) {
   return info.language === 'en';
 }
 
-function bestImage(imageLinks) {
-  if (!imageLinks) return '';
+// Google Books ids ending "ACAAJ" are print-only listings with no real
+// digitized cover -- their thumbnail URL still returns 200, but it's the
+// exact same generic placeholder image for every such book (verified by
+// content-length on a sample), which looks like a wrong/broken cover rather
+// than a missing one. Treat them as having no image at all.
+function bestImage(id, imageLinks) {
+  if (!imageLinks || /ACAAJ$/.test(id)) return '';
   const url = imageLinks.thumbnail || imageLinks.smallThumbnail || '';
   return url.replace(/^http:/, 'https:').replace('zoom=1', 'zoom=2');
 }
@@ -121,7 +126,7 @@ async function main() {
         matchedAuthor: author,
         description: (info.description || '').slice(0, 500),
         year: info.publishedDate ? info.publishedDate.slice(0, 4) : '',
-        image: bestImage(info.imageLinks),
+        image: bestImage(item.id, info.imageLinks),
         rating: info.averageRating || 0,
         ratingsCount: info.ratingsCount || 0,
         infoLink: (info.infoLink || item.selfLink || '').replace(/^http:/, 'https:'),
