@@ -547,6 +547,14 @@
     font-variant-numeric: tabular-nums;
   }
 
+  .meta-rating {
+    font-size: 12px;
+    color: var(--tag);
+    font-weight: 600;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+
   .empty {
     grid-column: 1 / -1;
     text-align: center;
@@ -742,6 +750,16 @@
   .goodreads-link:hover { text-decoration: underline; }
   .goodreads-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
 
+  .detail-description {
+    margin: 22px 0 0;
+    padding-top: 22px;
+    border-top: 1px solid var(--border);
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--text-muted);
+    max-width: 62ch;
+  }
+
   .read-status {
     margin-top: 6px;
     padding-top: 20px;
@@ -837,14 +855,14 @@
             <div class="combo-list" id="filterAuthorList" role="listbox" hidden></div>
           </div>
         </label>
-        <label class="filter-field">
+        <label class="filter-field" id="filterSeriesField">
           <span>Series</span>
           <div class="combo">
             <input type="text" id="filterSeries" placeholder="Any series" autocomplete="off" role="combobox" aria-expanded="false">
             <div class="combo-list" id="filterSeriesList" role="listbox" hidden></div>
           </div>
         </label>
-        <label class="filter-field">
+        <label class="filter-field" id="filterPublisherField">
           <span>Publisher</span>
           <div class="combo">
             <input type="text" id="filterPublisher" placeholder="Any publisher" autocomplete="off" role="combobox" aria-expanded="false">
@@ -855,7 +873,7 @@
           <span>Year</span>
           <select id="filterYear"><option value="">Any year</option></select>
         </label>
-        <label class="filter-field">
+        <label class="filter-field" id="filterReadField">
           <span>Read status</span>
           <select id="filterRead">
             <option value="">Any</option>
@@ -898,7 +916,7 @@
   <div id="bookViewContent"></div>
 </div>
 
-<footer>Snapshot of the Fantasy and Other Books tabs from your library spreadsheet &middot; ask to refresh after adding books.</footer>
+<footer>Fantasy and Other Books are a snapshot of your library spreadsheet &middot; Discover suggests more books by Fantasy-shelf authors via the Google Books API &middot; ask to refresh either.</footer>
 
 <script>
   const PAGE_SIZE = 24;
@@ -1051,6 +1069,7 @@
   function cardHtml(book) {
     const meta = [authorBtn(book), seriesBtn(book), publisherBtn(book)].filter(Boolean);
     if (book.year) meta.push(`<span class="meta-year">${escapeHtml(book.year)}</span>`);
+    if (book.rating) meta.push(`<span class="meta-rating">&#9733; ${escapeHtml(String(book.rating))}</span>`);
     const metaHtml = meta.join('<span class="meta-dot">&middot;</span>');
     const badge = isRead(book.id) ? '<span class="read-badge">&check; Read</span>' : '';
 
@@ -1068,30 +1087,31 @@
     return `<div class="detail-field"><dt>${label}</dt><dd${plain ? ' class="plain"' : ''}>${valueHtml}</dd></div>`;
   }
 
-  function goodreadsLink(book) {
-    return book.goodreads
-      ? `<a class="goodreads-link" href="${escapeHtml(book.goodreads)}" target="_blank" rel="noopener noreferrer">View on Goodreads <span aria-hidden="true">&#8599;</span></a>`
+  function externalLink(url, label) {
+    return url
+      ? `<a class="goodreads-link" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${label} <span aria-hidden="true">&#8599;</span></a>`
       : '';
   }
 
   function bookDetailHtml(book) {
+    const isDiscover = book.shelfKey === 'discover';
     const rows = [
       detailField('Author', authorBtn(book)),
       detailField('Series', seriesBtn(book)),
       detailField('Publisher', publisherBtn(book)),
       detailField('Year', book.year ? escapeHtml(book.year) : '', true),
+      detailField('Rating', book.rating ? `&#9733; ${escapeHtml(String(book.rating))}${book.ratingsCount ? ` (${escapeHtml(String(book.ratingsCount))} ratings)` : ''}` : '', true),
       detailField('ISBN', book.isbn ? escapeHtml(book.isbn) : '', true),
-      detailField('Goodreads', goodreadsLink(book)),
+      detailField('Goodreads', externalLink(book.goodreads, 'View on Goodreads')),
+      detailField('Google Books', externalLink(book.infoLink, 'View on Google Books')),
     ].join('');
     const read = isRead(book.id);
 
-    return `<div class="detail-layout">
-      <div class="detail-cover">${coverInner(book)}</div>
-      <div class="detail-info">
-        <div class="detail-eyebrow">Personal Library &middot; Fantasy Shelf</div>
-        <h2 class="detail-title">${escapeHtml(book.title)}</h2>
-        <dl class="detail-fields">${rows}</dl>
-        <div class="read-status">
+    const description = book.description
+      ? `<p class="detail-description">${escapeHtml(book.description)}</p>`
+      : '';
+
+    const readStatusBlock = isDiscover ? '' : `<div class="read-status">
           <span class="read-status-label">Reading status</span>
           <div class="read-toggle-row">
             <label class="switch">
@@ -1100,7 +1120,20 @@
             </label>
             <span id="readToggleLabel">${read ? 'Read' : 'Not read'}</span>
           </div>
-        </div>
+        </div>`;
+
+    const eyebrow = isDiscover
+      ? 'Suggested &middot; Not in your library'
+      : 'Personal Library &middot; Fantasy Shelf';
+
+    return `<div class="detail-layout">
+      <div class="detail-cover">${coverInner(book)}</div>
+      <div class="detail-info">
+        <div class="detail-eyebrow">${eyebrow}</div>
+        <h2 class="detail-title">${escapeHtml(book.title)}</h2>
+        <dl class="detail-fields">${rows}</dl>
+        ${description}
+        ${readStatusBlock}
       </div>
     </div>`;
   }
@@ -1283,6 +1316,13 @@
     statsEl.innerHTML = `<strong>${BOOKS.length}</strong> books &middot; <strong>${authorCount}</strong> authors &middot; <strong>${seriesCount}</strong> series`;
   }
 
+  function updateFilterVisibility() {
+    const isDiscover = activeShelfKey === 'discover';
+    document.getElementById('filterSeriesField').hidden = isDiscover;
+    document.getElementById('filterPublisherField').hidden = isDiscover;
+    document.getElementById('filterReadField').hidden = isDiscover;
+  }
+
   function switchShelf(key) {
     if (key === activeShelfKey || !shelfByKey(key)) return;
     activeShelfKey = key;
@@ -1292,6 +1332,7 @@
     searchInput.value = '';
     renderTabs();
     updateStats();
+    updateFilterVisibility();
     populateFilterOptions();
     recompute();
   }
@@ -1364,6 +1405,7 @@
 
   renderTabs();
   updateStats();
+  updateFilterVisibility();
   populateFilterOptions();
   renderPage();
   route();

@@ -7,6 +7,7 @@ const template = fs.readFileSync(path.join(root, 'template.html'), 'utf8');
 const SHELF_FILES = [
   { key: 'fantasy', label: 'Fantasy', file: 'books.json' },
   { key: 'others', label: 'Other Books', file: 'others.json' },
+  { key: 'discover', label: 'Discover', file: 'discover.json' },
 ];
 
 const shelves = SHELF_FILES.map(({ key, label, file }) => {
