@@ -1,4 +1,5 @@
 <title>The Fantasy Shelf</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%235b4b8a'/%3E%3Cpath d='M8 9.2C8 7.86 9.07 6.8 10.4 6.8H17a1.6 1.6 0 0 1 1.6 1.6v16.8a1.6 1.6 0 0 0-1.6-1.6H10.4A2.4 2.4 0 0 1 8 21.2V9.2Z' fill='none' stroke='%23f6f3fb' stroke-width='1.6' stroke-linejoin='round'/%3E%3Cpath d='M24 9.2c0-1.33-1.07-2.4-2.4-2.4H15a1.6 1.6 0 0 0-1.6 1.6v16.8a1.6 1.6 0 0 1 1.6-1.6h6.6A2.4 2.4 0 0 0 24 21.2V9.2Z' fill='none' stroke='%23f6f3fb' stroke-width='1.6' stroke-linejoin='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&family=PT+Sans:wght@400;600;700&display=swap" rel="stylesheet">
@@ -667,7 +668,45 @@
     height: 100%;
     object-fit: cover;
     display: block;
+    cursor: zoom-in;
   }
+
+  .lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+    background: rgba(10, 8, 14, 0.82);
+    cursor: zoom-out;
+  }
+
+  .lightbox[hidden] { display: none; }
+
+  .lightbox img {
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: 10px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    cursor: default;
+  }
+
+  .lightbox-close {
+    position: absolute;
+    top: 18px;
+    right: 22px;
+    font-size: 28px;
+    line-height: 1;
+    color: #fff;
+    background: none;
+    border: none;
+    cursor: pointer;
+    opacity: 0.8;
+  }
+
+  .lightbox-close:hover { opacity: 1; }
 
   .detail-info {
     flex: 1 1 320px;
@@ -918,6 +957,11 @@
 
 <footer>Fantasy and Other Books are a snapshot of your library spreadsheet &middot; Discover suggests more books by Fantasy-shelf authors via the Google Books API &middot; ask to refresh either.</footer>
 
+<div class="lightbox" id="lightbox" hidden>
+  <button type="button" class="lightbox-close" aria-label="Close enlarged cover">&times;</button>
+  <img id="lightboxImg" src="" alt="">
+</div>
+
 <script>
   const PAGE_SIZE = 24;
   // Newest additions (end of the spreadsheet) shown first, within each shelf.
@@ -949,6 +993,8 @@
   const bookViewContent = document.getElementById('bookViewContent');
   const homeLink = document.getElementById('homeLink');
   const backToShelfBtn = document.getElementById('backToShelf');
+  const lightbox = document.getElementById('lightbox');
+  const lightboxImg = document.getElementById('lightboxImg');
   const shelfTabs = document.getElementById('shelfTabs');
   const filterPanel = document.getElementById('filterPanel');
   const filterCountEl = document.getElementById('filterCount');
@@ -1340,6 +1386,7 @@
   function showBrowse() {
     bookView.hidden = true;
     browseView.hidden = false;
+    closeLightbox();
   }
 
   function showBook(book) {
@@ -1347,6 +1394,7 @@
     bookViewContent.innerHTML = bookDetailHtml(book);
     browseView.hidden = true;
     bookView.hidden = false;
+    closeLightbox();
     window.scrollTo(0, 0);
   }
 
@@ -1359,7 +1407,21 @@
 
   searchInput.addEventListener('input', () => recompute());
 
+  function openLightbox(src, alt) {
+    lightboxImg.src = src;
+    lightboxImg.alt = alt || '';
+    lightbox.hidden = false;
+  }
+
+  function closeLightbox() {
+    lightbox.hidden = true;
+    lightboxImg.src = '';
+  }
+
   document.addEventListener('click', (e) => {
+    const coverImg = e.target.closest('.detail-cover img');
+    if (coverImg) { openLightbox(coverImg.src, coverImg.alt); return; }
+    if (e.target.closest('.lightbox')) { closeLightbox(); return; }
     const filterBtn = e.target.closest('[data-filter-type]');
     if (filterBtn) { setFieldFilter(filterBtn.dataset.filterType, filterBtn.dataset.filterValue); return; }
     const tabBtn = e.target.closest('[data-shelf-key]');
@@ -1369,6 +1431,10 @@
     const card = e.target.closest('.card');
     if (card && card.dataset.bookId) openBook(card.dataset.bookId);
     if (!e.target.closest('#filterPanel') && filterPanel.open) filterPanel.open = false;
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !lightbox.hidden) closeLightbox();
   });
 
   document.addEventListener('change', (e) => {

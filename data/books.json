@@ -6536,7 +6536,7 @@
     "year": "2024",
     "isbn": "",
     "image": "https://cdn.ozone.bg/media/catalog/product/cache/1/image/a4e40ebdc3e371adff845072e1c73f37/s/r/264eea0bef850bb166b62b74c9fe2af6/srebarna-pesen--noshten-plamak-pesen-za-poslednoto-kralstvo-1-30.jpg",
-    "read": false,
+    "read": true,
     "goodreads": ""
   },
   {
@@ -6548,7 +6548,7 @@
     "year": "2024",
     "isbn": "",
     "image": "https://cdn.ozone.bg/media/catalog/product/cache/1/image/a4e40ebdc3e371adff845072e1c73f37/t/a/ea975b7f5a066097c1d97dc8cc46950e/tamna-zvezda-gori--byala-pepel-se-sipe-pesen-za-poslednoto-kralstvo-2-30.jpg",
-    "read": false,
+    "read": true,
     "goodreads": ""
   },
   {
@@ -7190,7 +7190,7 @@
   {
     "id": 599,
     "title": "Оскверненият съд",
-    "series": "",
+    "series": "Сянката на левиатана",
     "author": "Робърт Джаксън Бенет",
     "publisher": "Artline Studios",
     "year": "2025",

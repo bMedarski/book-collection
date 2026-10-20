@@ -28,7 +28,15 @@ if (!API_KEY) {
 const authorMap = JSON.parse(fs.readFileSync(path.join(root, 'data', 'author-map.json'), 'utf8'));
 const fantasyBooks = JSON.parse(fs.readFileSync(path.join(root, 'data', 'books.json'), 'utf8'));
 
-const canonicalAuthors = [...new Set(Object.values(authorMap))].sort((a, b) => a.localeCompare(b));
+// --only=path/to/names.json restricts the run to a subset of authors (e.g.
+// ones that previously only got a shallow fetch) -- entries for OTHER
+// authors already in data/discover.json are preserved, not wiped.
+const onlyArg = process.argv.find((a) => a.startsWith('--only='));
+let canonicalAuthors = [...new Set(Object.values(authorMap))].sort((a, b) => a.localeCompare(b));
+if (onlyArg) {
+  const onlyList = new Set(JSON.parse(fs.readFileSync(onlyArg.slice('--only='.length), 'utf8')));
+  canonicalAuthors = canonicalAuthors.filter((a) => onlyList.has(a));
+}
 
 function normTitle(t) {
   return (t || '')
@@ -64,11 +72,13 @@ async function fetchPage(name, startIndex, orderBy, attempt = 1) {
 // and "relevance" vs "newest" surface different subsets for a prolific author
 // (Sanderson, Pratchett, etc. easily have 30-50+ real English titles) -- pull
 // both orderings, paging each until a page comes back empty (not just short;
-// short pages of ~20 are normal), capped at 6 pages/ordering as a ceiling.
+// short pages of ~20 are normal), capped at 4 pages/ordering (8 requests per
+// author) as a quota-conscious ceiling -- the free tier is 1,000 queries/day
+// and a run across ~100 authors needs headroom for retries too.
 async function fetchAuthor(name) {
   const all = [];
   for (const orderBy of ['relevance', 'newest']) {
-    for (let page = 0; page < 6; page++) {
+    for (let page = 0; page < 4; page++) {
       const items = await fetchPage(name, page * 40, orderBy);
       if (!items.length) break;
       all.push(...items);
@@ -148,11 +158,18 @@ async function main() {
     books.push(...sorted);
   }
 
-  books.forEach((b, i) => { b.id = i; });
-
   const outPath = path.join(root, 'data', 'discover.json');
-  fs.writeFileSync(outPath, JSON.stringify(books, null, 2), 'utf8');
-  console.log(`\nWrote ${books.length} suggestions from ${perAuthorResults.size} authors -> ${outPath}`);
+  let finalBooks = books;
+  if (onlyArg && fs.existsSync(outPath)) {
+    const existing = JSON.parse(fs.readFileSync(outPath, 'utf8'));
+    const touchedAuthors = new Set(perAuthorResults.keys());
+    const untouched = existing.filter((b) => !touchedAuthors.has(b.matchedAuthor));
+    finalBooks = [...untouched, ...books];
+  }
+
+  finalBooks.forEach((b, i) => { b.id = i; });
+  fs.writeFileSync(outPath, JSON.stringify(finalBooks, null, 2), 'utf8');
+  console.log(`\nWrote ${finalBooks.length} total suggestions (${books.length} from this run's ${perAuthorResults.size} authors) -> ${outPath}`);
 }
 
 main();
